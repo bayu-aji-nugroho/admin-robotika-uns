@@ -6,23 +6,22 @@ import type { Metadata } from "next";
 
 export const instant = false;
 
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
-  await params;
-  return {
-    title: "Detail Pendaftar - Robotika Universitas Sebelas Maret",
-    description: "Rincian formulir pendaftaran calon anggota UKM Robotika UNS.",
-  };
-}
+export const metadata: Metadata = {
+  title: "Detail Pendaftar - Robotika Universitas Sebelas Maret",
+  description: "Rincian formulir pendaftaran calon anggota UKM Robotika UNS.",
+};
+
 
 export default async function ApplicantDetailRoute({ params }: PageProps) {
   await connection();
-  const { id } = await params;
+  const rawParams = await params;
+  const rawId = rawParams?.id || "";
+  const id = decodeURIComponent(rawId).trim();
 
   if (!id) {
     notFound();
@@ -70,41 +69,38 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
     query = query.or(`registration_code.eq.${id},nim.eq.${id}`);
   }
 
-  const { data: applicant } = await query.maybeSingle();
+  const { data: applicant, error: applicantError } = await query.maybeSingle();
+
+  if (applicantError) {
+    console.error("Gagal mengambil data pendaftar:", applicantError.message);
+  }
 
   if (!applicant) {
     notFound();
   }
 
-  // Hasilkan signed URL terkini jika berkas tersimpan di storage
-  let freshCvUrl = applicant.cv_file_url;
-  if (applicant.cv_storage_path) {
-    try {
-      const { data: signed } = await supabase.storage
-        .from("cv-uploads")
-        .createSignedUrl(applicant.cv_storage_path, 7200);
+  // Jalankan pengambilan Signed URL, total pendaftar, dan urutan pendaftar secara paralel
+  const [signedResult, totalResult, orderResult] = await Promise.all([
+    applicant.cv_storage_path
+      ? supabase.storage
+          .from("cv-uploads")
+          .createSignedUrl(applicant.cv_storage_path, 7200)
+          .catch(() => ({ data: null }))
+      : Promise.resolve({ data: null }),
+    supabase.from("registrations").select("*", { count: "exact", head: true }),
+    supabase
+      .from("registrations")
+      .select("*", { count: "exact", head: true })
+      .lte("created_at", applicant.created_at),
+  ]);
 
-      if (signed?.signedUrl) {
-        freshCvUrl = signed.signedUrl;
-      }
-    } catch {
-      // Pertahankan url bawaan jika gagal generate
-    }
+  let freshCvUrl = applicant.cv_file_url;
+  if (signedResult?.data?.signedUrl) {
+    freshCvUrl = signedResult.data.signedUrl;
   }
 
-  // Hitung total seluruh pendaftar
-  const { count: totalCount } = await supabase
-    .from("registrations")
-    .select("*", { count: "exact", head: true });
-
-  // Hitung urutan pendaftar (pendaftar ke berapa berdasarkan created_at)
-  const { count: orderCount } = await supabase
-    .from("registrations")
-    .select("*", { count: "exact", head: true })
-    .lte("created_at", applicant.created_at);
-
-  const orderNumber = orderCount || 1;
-  const totalApplicants = totalCount || 1;
+  const orderNumber = orderResult?.count || 1;
+  const totalApplicants = totalResult?.count || 1;
 
   return (
     <ApplicantDetailPage

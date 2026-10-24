@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { DashboardSidebar } from "@/components/organisms/DashboardSidebar";
 import { Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 interface DashboardTemplateProps {
   children: React.ReactNode;
@@ -11,8 +12,10 @@ interface DashboardTemplateProps {
 
 export function DashboardTemplate({
   children,
-  currentPath = "/dashboard",
+  currentPath,
 }: DashboardTemplateProps) {
+  const pathname = usePathname();
+  const activePath = currentPath || pathname || "/dashboard";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -52,7 +55,7 @@ export function DashboardTemplate({
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
-        <DashboardSidebar currentPath={currentPath} />
+        <DashboardSidebar currentPath={activePath} />
       </div>
 
       {/* Main Content Area */}

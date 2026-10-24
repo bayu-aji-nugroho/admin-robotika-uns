@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 
 export const instant = false;
 
+
 export const metadata: Metadata = {
   title: "Pengaturan OPREC - Robotika Universitas Sebelas Maret",
   description:

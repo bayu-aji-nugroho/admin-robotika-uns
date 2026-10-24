@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 
 export const instant = false;
 
+
 export const metadata: Metadata = {
   title: "Dashboard Admin - Robotika Universitas Sebelas Maret",
   description: "Panel Kontrol Sistem UKM Robotika UNS untuk Pengelolaan OPREC dan Data Organisasi.",
