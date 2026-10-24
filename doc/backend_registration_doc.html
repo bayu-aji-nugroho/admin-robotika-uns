@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Dokumentasi Backend - Alur Pendaftaran Anggota Baru Robotika UNS</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 14mm 15mm 14mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #18181b;
+      background: #ffffff;
+      font-size: 8.5pt;
+      line-height: 1.42;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .header-bar {
+      border-bottom: 2px solid #b22234;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .org-badge {
+      font-size: 7.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #b22234;
+      margin-bottom: 2px;
+    }
+
+    .doc-title {
+      font-size: 14.5pt;
+      font-weight: 800;
+      color: #09090b;
+      letter-spacing: -0.3px;
+    }
+
+    .doc-subtitle {
+      font-size: 8.2pt;
+      color: #52525b;
+      margin-top: 1px;
+    }
+
+    .meta-box {
+      text-align: right;
+      font-size: 7.5pt;
+      color: #71717a;
+      line-height: 1.35;
+    }
+
+    .meta-box strong {
+      color: #18181b;
+    }
+
+    h2 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #09090b;
+      border-left: 3px solid #b22234;
+      padding-left: 7px;
+      margin-top: 12px;
+      margin-bottom: 6px;
+      letter-spacing: -0.2px;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    h3 {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #27272a;
+      margin-top: 8px;
+      margin-bottom: 4px;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    p {
+      margin-bottom: 6px;
+      color: #27272a;
+    }
+
+    ul, ol {
+      margin-left: 16px;
+      margin-bottom: 8px;
+      color: #27272a;
+    }
+
+    li {
+      margin-bottom: 2.5px;
+    }
+
+    .badge-tag {
+      display: inline-block;
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 6.8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: #f4f4f5;
+      color: #3f3f46;
+      border: 1px solid #e4e4e7;
+    }
+
+    .badge-post {
+      background: #eef2ff;
+      color: #3730a3;
+      border-color: #c7d2fe;
+    }
+
+    .badge-req {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    .badge-opt {
+      background: #f0fdf4;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      font-size: 7.8pt;
+      page-break-inside: auto;
+    }
+
+    tr {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    th {
+      background: #f4f4f5;
+      color: #18181b;
+      text-align: left;
+      font-weight: 700;
+      padding: 4.5px 6.5px;
+      border: 1px solid #e4e4e7;
+      font-size: 7.3pt;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    td {
+      padding: 4px 6.5px;
+      border: 1px solid #e4e4e7;
+      vertical-align: top;
+      color: #27272a;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafafa;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 7.6pt;
+      background: #f4f4f5;
+      padding: 1px 3.5px;
+      border-radius: 3px;
+      border: 1px solid #e4e4e7;
+      color: #09090b;
+    }
+
+    pre {
+      background: #18181b;
+      color: #f4f4f5;
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7.2pt;
+      line-height: 1.34;
+      margin-top: 5px;
+      margin-bottom: 9px;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-all;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .callout {
+      background: #f8fafc;
+      border-left: 3px solid #3b82f6;
+      padding: 6px 9px;
+      border-radius: 0 4px 4px 0;
+      margin-top: 6px;
+      margin-bottom: 8px;
+      font-size: 7.8pt;
+      color: #334155;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .endpoint-card {
+      background: #fafafa;
+      border: 1px solid #e4e4e7;
+      border-radius: 4px;
+      padding: 7px 9px;
+      margin-bottom: 8px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .endpoint-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 8.2pt;
+      font-family: ui-monospace, monospace;
+    }
+
+    .page-break {
+      page-break-before: always;
+      break-before: always;
+    }
+
+    .footer-bar {
+      margin-top: 14px;
+      border-top: 1px solid #e4e4e7;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7pt;
+      color: #a1a1aa;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER DOKUMEN -->
+  <div class="header-bar">
+    <div>
+      <div class="org-badge">UKM Robotika Universitas Sebelas Maret</div>
+      <h1 class="doc-title">Spesifikasi Backend: Data Registrasi Calon Anggota</h1>
+      <p class="doc-subtitle">Panduan implementasi API intake form pendaftaran dan persistensi database</p>
+    </div>
+    <div class="meta-box">
+      <div><strong>Versi Dokumen:</strong> 1.0.0</div>
+      <div><strong>Target Rilis:</strong> OPREC 2026</div>
+      <div><strong>Sifat:</strong> Teknis / Agnostik Database</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: RUANG LINGKUP -->
+  <h2>1. Ruang Lingkup dan Batasan Sistem</h2>
+  <p>
+    Dokumen ini menjadi standar integrasi antara antarmuka formulir pendaftaran (frontend web) dengan service backend. Fokus dokumen ini mencakup siklus penerimaan data awal, yaitu:
+  </p>
+  <ul>
+    <li>Penerimaan data formulir dari antarmuka web ke endpoint API backend.</li>
+    <li>Validasi identitas mahasiswa, integritas pilihan divisi, serta validasi berkas fisik CV.</li>
+    <li>Penyimpanan berkas fisik CV ke storage (object storage atau local disk server).</li>
+    <li>Penyimpanan data pendaftar ke tabel database relasional.</li>
+    <li>Pengembalian status response HTTP beserta kode pendaftaran unik ke frontend.</li>
+  </ul>
+  <p>
+    Alur seleksi lanjutan seperti tahapan review admin, wawancara, dan pengumuman kelulusan tidak dibahas pada dokumen ini dan ditangani terpisah setelah data tersimpan.
+  </p>
+
+  <!-- SECTION 2: ALUR DATA END-TO-END -->
+  <h2>2. Alur Pengiriman Data (End-to-End Workflow)</h2>
+  <ol>
+    <li>
+      <strong>Pengisian Form di Frontend:</strong> Calon anggota menyetujui syarat, mengisi identitas diri (Nama, NIM, Prodi, Angkatan, WhatsApp), memilih 2 divisi beserta alasan, mengunggah berkas CV format PDF (maksimal 1.0 MB), dan mencentang keabsahan berkas.
+    </li>
+    <li>
+      <strong>Validasi Client-Side:</strong> Frontend memeriksa kelengkapan data, memvalidasi format berkas PDF, serta menghasilkan kode registrasi lokal dengan format <code>ROB-UNS-2026-XXXX</code>.
+    </li>
+    <li>
+      <strong>Pengiriman HTTP Request:</strong> Frontend mengirim request ke backend. Metode default yang digunakan adalah <code>multipart/form-data</code> karena membawa berkas fisik secara langsung.
+    </li>
+    <li>
+      <strong>Pemrosesan di Backend:</strong>
+      <ul>
+        <li>Validasi keberadaan field wajib dan keabsahan tipe berkas (MIME <code>application/pdf</code>, batas ukuran 1 MB).</li>
+        <li>Pemeriksaan duplikasi NIM pada database agar satu mahasiswa tidak mendaftar dua kali.</li>
+        <li>Penyimpanan berkas CV ke storage engine dan pembuatan path penyimpanan.</li>
+        <li>Penyimpanan baris data pendaftar ke tabel database.</li>
+      </ul>
+    </li>
+    <li>
+      <strong>Respons HTTP:</strong> Backend mengembalikan kode HTTP <code>201 Created</code> disertai payload konfirmasi. Frontend menampilkan halaman tanda terima dan tautan grup WhatsApp.
+    </li>
+  </ol>
+
+  <!-- SECTION 3: SPESIFIKASI ENDPOINT API -->
+  <h2>3. Spesifikasi Endpoint API</h2>
+  <div class="endpoint-card">
+    <div class="endpoint-title">
+      <span class="badge-tag badge-post">POST</span>
+      <span>/api/v1/registrations</span>
+    </div>
+    <p style="margin-top: 4px; font-size: 7.8pt; color: #52525b;">
+      Menerima berkas fisik CV beserta seluruh data formulir pendaftaran calon anggota.
+    </p>
+    <div style="font-size: 7.4pt; color: #71717a; margin-top: 2px;">
+      <strong>Content-Type yang Diterima:</strong> <code>multipart/form-data</code> (disarankan) atau <code>application/json</code> (bila file diunggah terpisah via presigned URL).
+    </div>
+  </div>
+
+  <h3>Daftar Field Multipart (Form-Data Contract)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 23%;">Field Key</th>
+        <th style="width: 13%;">Tipe Data</th>
+        <th style="width: 9%;">Status</th>
+        <th style="width: 33%;">Ketentuan & Validasi</th>
+        <th style="width: 22%;">Contoh Nilai</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>registration_code</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Kode registrasi unik, format <code>ROB-UNS-2026-XXXX</code>. Maks. 32 karakter.</td>
+        <td><code>ROB-UNS-2026-1042</code></td>
+      </tr>
+      <tr>
+        <td><code>full_name</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Nama lengkap sesuai identitas mahasiswa. Maks. 255 karakter.</td>
+        <td><code>Dimas Arya Prasetya</code></td>
+      </tr>
+      <tr>
+        <td><code>nim</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Nomor Induk Mahasiswa, huruf kapital, unik, maks. 30 karakter.</td>
+        <td><code>I0724018</code></td>
+      </tr>
+      <tr>
+        <td><code>prodi</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Nama program studi jenjang sarjana atau vokasi.</td>
+        <td><code>S1 Teknik Elektro</code></td>
+      </tr>
+      <tr>
+        <td><code>angkatan</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Tahun masuk kuliah (4 digit angka).</td>
+        <td><code>2025</code></td>
+      </tr>
+      <tr>
+        <td><code>whatsapp</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Nomor aktif tersanitasi (hanya angka, awalan <code>08</code>).</td>
+        <td><code>081234567891</code></td>
+      </tr>
+      <tr>
+        <td><code>primary_division_id</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Identifier divisi pilihan pertama.</td>
+        <td><code>werkudara-pemrograman</code></td>
+      </tr>
+      <tr>
+        <td><code>primary_division_name</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Nama divisi pilihan pertama.</td>
+        <td><code>Werkudara - Pemrograman</code></td>
+      </tr>
+      <tr>
+        <td><code>primary_division_category</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Nilai enum: <code>teknis</code> atau <code>non-teknis</code>.</td>
+        <td><code>teknis</code></td>
+      </tr>
+      <tr>
+        <td><code>primary_reason</code></td>
+        <td>Text</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Alasan dan motivasi memilih divisi pertama.</td>
+        <td>Deskripsi minat mikrokontroler...</td>
+      </tr>
+      <tr>
+        <td><code>secondary_division_id</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Identifier divisi pilihan kedua (tidak boleh sama dengan pilihan 1).</td>
+        <td><code>werkudara-elektronika</code></td>
+      </tr>
+      <tr>
+        <td><code>secondary_division_name</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Nama divisi pilihan kedua.</td>
+        <td><code>Werkudara - Elektronika</code></td>
+      </tr>
+      <tr>
+        <td><code>secondary_division_category</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Nilai enum: <code>teknis</code> atau <code>non-teknis</code>.</td>
+        <td><code>teknis</code></td>
+      </tr>
+      <tr>
+        <td><code>secondary_reason</code></td>
+        <td>Text</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Alasan dan motivasi memilih divisi kedua.</td>
+        <td>Deskripsi minat hardware PCB...</td>
+      </tr>
+      <tr>
+        <td><code>agreed_requirements</code></td>
+        <td>Boolean/String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Konfirmasi pemenuhan syarat seleksi (harus bernilai <code>true</code>).</td>
+        <td><code>true</code></td>
+      </tr>
+      <tr>
+        <td><code>agreed_truth</code></td>
+        <td>Boolean/String</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Konfirmasi kebenaran berkas CV (harus bernilai <code>true</code>).</td>
+        <td><code>true</code></td>
+      </tr>
+      <tr>
+        <td><code>submitted_at</code></td>
+        <td>String</td>
+        <td><span class="badge-tag badge-opt">Opsional</span></td>
+        <td>Timestamp pengiriman dari frontend dalam format ISO 8601.</td>
+        <td><code>2026-10-18T08:15:30.000Z</code></td>
+      </tr>
+      <tr>
+        <td><code>payload_json</code></td>
+        <td>String JSON</td>
+        <td><span class="badge-tag badge-opt">Opsional</span></td>
+        <td>Payload terstruktur lengkap dalam bentuk serialisasi JSON string.</td>
+        <td><code>{"registrationCode":...}</code></td>
+      </tr>
+      <tr>
+        <td><code>cv_file</code></td>
+        <td>File Biner</td>
+        <td><span class="badge-tag badge-req">Wajib</span></td>
+        <td>Berkas dokumen CV format PDF asli, ukuran maksimal 1.048.576 bytes (1.0 MB).</td>
+        <td><code>berkas_cv.pdf</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 4: KONTRAK JSON ALTERNATIF -->
+  <div class="page-break"></div>
+
+  <h2>4. Format JSON Payload Terstruktur (Frontend Contract)</h2>
+  <p>
+    Bila sistem upload menggunakan direct-to-storage presigned URL, payload JSON dikirim dengan skema berikut:
+  </p>
+  <pre><code>{
+  "registrationCode": "ROB-UNS-2026-1042",
+  "applicant": {
+    "fullName": "Dimas Arya Prasetya",
+    "nim": "I0724018",
+    "prodi": "S1 Teknik Elektro",
+    "angkatan": "2025",
+    "whatsapp": "081234567891"
+  },
+  "divisions": {
+    "primary": {
+      "id": "werkudara-pemrograman",
+      "name": "Werkudara - Pemrograman",
+      "category": "teknis",
+      "reason": "Memiliki dasar pemrograman C++ dan algoritma kontrol gerak robot."
+    },
+    "secondary": {
+      "id": "werkudara-elektronika",
+      "name": "Werkudara - Elektronika",
+      "category": "teknis",
+      "reason": "Tertarik mendalami perancangan sirkuit daya dan layout PCB motor driver."
+    }
+  },
+  "cvFileMetadata": {
+    "fileName": "CV_Dimas_Arya_Prasetya.pdf",
+    "fileSizeBytes": 624500,
+    "fileSizeFormatted": "610 KB"
+  },
+  "consents": {
+    "agreedToRequirements": true,
+    "agreedToCvTruth": true
+  },
+  "metadata": {
+    "submittedAt": "2026-10-18T08:15:30.000Z",
+    "source": "web_registration_portal"
+  }
+}</code></pre>
+
+  <!-- SECTION 5: VALIDASI SISI BACKEND -->
+  <h2>5. Aturan Validasi Sisi Backend (Server Validation)</h2>
+  <p>
+    Backend wajib mengeksekusi validasi server-side berikut sebelum melakukan penulisan ke database:
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Area Validasi</th>
+        <th style="width: 45%;">Ketentuan Pengecekan</th>
+        <th style="width: 30%;">Respons Jika Gagal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Keunikan NIM</strong></td>
+        <td>Query database untuk memastikan NIM belum pernah terdaftar sebelumnya.</td>
+        <td>HTTP 409 Conflict: <code>NIM sudah terdaftar dalam sistem</code></td>
+      </tr>
+      <tr>
+        <td><strong>Kombinasi Divisi</strong></td>
+        <td><code>primary_division_id</code> tidak boleh sama dengan <code>secondary_division_id</code>. Kategori harus bernilai <code>teknis</code> atau <code>non-teknis</code>.</td>
+        <td>HTTP 400 Bad Request: <code>Pilihan divisi 1 dan 2 tidak boleh sama</code></td>
+      </tr>
+      <tr>
+        <td><strong>Validasi Berkas CV</strong></td>
+        <td>
+          1. Ukuran file tidak boleh melebihi 1.048.576 bytes (1.0 MB).<br>
+          2. MIME type harus <code>application/pdf</code>.<br>
+          3. Magic byte header file harus diawali string <code>%PDF-</code> (hex: <code>25 50 44 46</code>).
+        </td>
+        <td>HTTP 400 Bad Request / 413 Payload Too Large: <code>Berkas harus berformat PDF dan maksimal 1 MB</code></td>
+      </tr>
+      <tr>
+        <td><strong>Sanitasi Kontak WhatsApp</strong></td>
+        <td>Pastikan nomor hanya berisi karakter angka. Konversi awalan internasional <code>+62</code> atau <code>62</code> menjadi format lokal <code>08</code>.</td>
+        <td>Sanitasi otomatis di server atau tolak jika panjang nomor kurang dari 10 digit.</td>
+      </tr>
+      <tr>
+        <td><strong>Persetujuan Syarat</strong></td>
+        <td>Nilai <code>agreed_requirements</code> dan <code>agreed_truth</code> harus bernilai <code>true</code>.</td>
+        <td>HTTP 400 Bad Request: <code>Persetujuan syarat dan keabsahan berkas wajib disetujui</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 6: SKEMA DATABASE -->
+  <div class="page-break"></div>
+
+  <h2>6. Desain Skema Database Relasional (SQL DDL Standar)</h2>
+  <p>
+    Skema database berikut menggunakan sintaks ANSI SQL standar yang kompatibel dengan PostgreSQL, MySQL, MariaDB, SQLite, maupun BaaS (Supabase):
+  </p>
+  <pre><code>-- Tabel utama untuk menyimpan pendaftaran anggota baru
+CREATE TABLE registrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  registration_code VARCHAR(32) NOT NULL UNIQUE,
+  full_name VARCHAR(255) NOT NULL,
+  nim VARCHAR(30) NOT NULL UNIQUE,
+  prodi VARCHAR(150) NOT NULL,
+  angkatan VARCHAR(10) NOT NULL,
+  whatsapp VARCHAR(30) NOT NULL,
+  
+  -- Pilihan Divisi Pertama
+  primary_division_id VARCHAR(100) NOT NULL,
+  primary_division_name VARCHAR(150) NOT NULL,
+  primary_division_category VARCHAR(20) NOT NULL,
+  primary_reason TEXT NOT NULL,
+  
+  -- Pilihan Divisi Kedua
+  secondary_division_id VARCHAR(100) NOT NULL,
+  secondary_division_name VARCHAR(150) NOT NULL,
+  secondary_division_category VARCHAR(20) NOT NULL,
+  secondary_reason TEXT NOT NULL,
+  
+  -- Berkas CV dan Penyimpanan
+  cv_file_name VARCHAR(255) NOT NULL,
+  cv_file_size_bytes BIGINT NOT NULL,
+  cv_storage_path TEXT NULL,
+  cv_file_url TEXT NULL,
+  
+  -- Persetujuan dan Waktu
+  agreed_requirements BOOLEAN DEFAULT TRUE NOT NULL,
+  agreed_truth BOOLEAN DEFAULT TRUE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+-- Indeks performa untuk pencarian identitas dan verifikasi
+CREATE UNIQUE INDEX idx_registrations_nim ON registrations(nim);
+CREATE UNIQUE INDEX idx_registrations_code ON registrations(registration_code);
+CREATE INDEX idx_registrations_created_at ON registrations(created_at);</code></pre>
+
+  <div class="callout">
+    <strong>Catatan Portabilitas SQL:</strong> Bila database target adalah MySQL atau MariaDB, ganti tipe data <code>UUID DEFAULT gen_random_uuid()</code> menjadi <code>VARCHAR(36)</code> atau kolom <code>id BIGINT AUTO_INCREMENT PRIMARY KEY</code>, dan sesuaikan <code>TIMESTAMP WITH TIME ZONE</code> menjadi <code>DATETIME DEFAULT CURRENT_TIMESTAMP</code>.
+  </div>
+
+  <!-- SECTION 7: PENYIMPANAN BERKAS -->
+  <h2>7. Manajemen Penyimpanan Berkas CV (Storage Strategy)</h2>
+  <p>
+    Berkas CV disimpan pada storage engine yang terpisah dari tabel database. Kolom database hanya menyimpan referensi path atau public/signed URL.
+  </p>
+  <ul>
+    <li>
+      <strong>Struktur Folder:</strong> Gunakan partisi tahun angkatan: <code>cv-uploads/[angkatan]/[NIM]_[clean_filename].pdf</code>.
+    </li>
+    <li>
+      <strong>Sanitasi Nama File:</strong> Hapus spasi dan karakter khusus dari nama asli berkas untuk mencegah masalah encoding dan path traversal:
+      Contoh: <code>cv-uploads/2025/I0724018_Dimas_Arya_Prasetya_CV.pdf</code>.
+    </li>
+    <li>
+      <strong>Opsi Backend Storage:</strong>
+      <ol style="margin-left: 14px; margin-top: 3px;">
+        <li><em>Object Storage (S3 / MinIO / GCS / Supabase Storage):</em> Simpan path relatif di kolom <code>cv_storage_path</code> dan URL akses di <code>cv_file_url</code>.</li>
+        <li><em>Local Disk Server:</em> Simpan berkas di direktori aman server (misalnya <code>/var/storage/cv/...</code>) yang dilayani melalui reverse proxy Nginx terotorisasi.</li>
+      </ol>
+    </li>
+  </ul>
+
+  <!-- SECTION 8: STANDAR KODE RESPONS HTTP -->
+  <div class="page-break"></div>
+
+  <h2>8. Standar Kode Respons HTTP dan Format Respons</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 13%;">Status</th>
+        <th style="width: 25%;">Kondisi</th>
+        <th style="width: 62%;">Format Payload JSON yang Diharapkan</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>201 Created</strong></td>
+        <td>Data formulir dan berkas berhasil divalidasi dan disimpan.</td>
+        <td>
+          <pre style="margin: 0; padding: 4px 6px; font-size: 7pt;"><code>{"success": true, "message": "Pendaftaran berhasil disimpan", "registrationCode": "ROB-UNS-2026-1042"}</code></pre>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>400 Bad Request</strong></td>
+        <td>Field wajib kosong, format keliru, atau berkas bukan PDF.</td>
+        <td>
+          <pre style="margin: 0; padding: 4px 6px; font-size: 7pt;"><code>{"success": false, "message": "Validasi gagal", "error": "Pilihan divisi pertama dan kedua tidak boleh sama"}</code></pre>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>409 Conflict</strong></td>
+        <td>NIM mahasiswa sudah pernah terdaftar di database.</td>
+        <td>
+          <pre style="margin: 0; padding: 4px 6px; font-size: 7pt;"><code>{"success": false, "message": "Data sudah terdaftar", "error": "NIM I0724018 sudah pernah didaftarkan sebelumnya"}</code></pre>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>413 Too Large</strong></td>
+        <td>Ukuran berkas CV melebihi batas 1.0 MB.</td>
+        <td>
+          <pre style="margin: 0; padding: 4px 6px; font-size: 7pt;"><code>{"success": false, "message": "Berkas terlalu besar", "error": "Ukuran berkas CV maksimal adalah 1.0 MB"}</code></pre>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>500 Error</strong></td>
+        <td>Gangguan koneksi database atau kegagalan penulisan storage.</td>
+        <td>
+          <pre style="margin: 0; padding: 4px 6px; font-size: 7pt;"><code>{"success": false, "message": "Terjadi kesalahan internal server", "error": "Gagal menyimpan data pendaftaran"}</code></pre>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 9: CONTOH PENGUJIAN -->
+  <h2>9. Contoh Pengujian Endpoint (cURL Test Command)</h2>
+  <pre><code>curl -X POST "http://localhost:8000/api/v1/registrations" \
+  -H "Accept: application/json" \
+  -F "registration_code=ROB-UNS-2026-1042" \
+  -F "full_name=Dimas Arya Prasetya" \
+  -F "nim=I0724018" \
+  -F "prodi=S1 Teknik Elektro" \
+  -F "angkatan=2025" \
+  -F "whatsapp=081234567891" \
+  -F "primary_division_id=werkudara-pemrograman" \
+  -F "primary_division_name=Werkudara - Pemrograman" \
+  -F "primary_division_category=teknis" \
+  -F "primary_reason=Memiliki pengalaman pemrograman C++ mikrokontroler STM32." \
+  -F "secondary_division_id=werkudara-elektronika" \
+  -F "secondary_division_name=Werkudara - Elektronika" \
+  -F "secondary_division_category=teknis" \
+  -F "secondary_reason=Berminat mendalami desain skematik PCB dan manajemen daya." \
+  -F "agreed_requirements=true" \
+  -F "agreed_truth=true" \
+  -F "submitted_at=2026-10-18T08:15:30.000Z" \
+  -F "cv_file=@/path/to/berkas_cv.pdf;type=application/pdf"</code></pre>
+
+  <!-- SECTION 10: CHECKLIST IMPLEMENTASI -->
+  <h2>10. Checklist Implementasi Developer Backend</h2>
+  <ul>
+    <li>Tabel <code>registrations</code> telah dibuat lengkap dengan constraint unik pada kolom <code>nim</code> dan <code>registration_code</code>.</li>
+    <li>Konfigurasi upload parser server (seperti multer di Node.js, request files di Python, atau FormRequest di Laravel) membatasi ukuran request maksimal 2 MB (1 MB untuk CV ditambah buffer field teks).</li>
+    <li>Pengecekan MIME type berkas dilakukan di sisi server, bukan hanya membaca ekstensi nama file.</li>
+    <li>Penyimpanan berkas ke folder/bucket menghasilkan URL yang dapat diakses oleh panitia seleksi.</li>
+    <li>Format respons JSON konsisten dengan properti <code>success</code>, <code>message</code>, dan <code>registrationCode</code> saat sukses.</li>
+    <li>Handling error duplikasi NIM mengembalikan status HTTP 409 dengan pesan yang ramah kepada pengguna.</li>
+  </ul>
+
+  <div class="footer-bar">
+    <div>Dokumentasi Teknis Internal - UKM Robotika Universitas Sebelas Maret</div>
+    <div>Dicetak otomatis untuk acuan integrasi backend tim pengembang</div>
+  </div>
+
+</body>
+</html>
