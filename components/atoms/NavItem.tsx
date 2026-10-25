@@ -13,6 +13,7 @@ interface NavItemProps {
   badge?: string | number;
   badgeVariant?: "primary" | "subtle" | "outline" | "code";
   disabled?: boolean;
+  isCollapsed?: boolean;
   onClick?: () => void;
   className?: string;
 }
@@ -25,39 +26,58 @@ export function NavItem({
   badge,
   badgeVariant = "subtle",
   disabled = false,
+  isCollapsed = false,
   onClick,
   className = "",
 }: NavItemProps) {
   const baseClasses = `
-    group relative flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold
+    group relative flex items-center rounded-lg text-xs font-medium
     transition-all duration-150 outline-hidden select-none cursor-pointer
     focus-visible:ring-2 focus-visible:ring-[#B22234] focus-visible:ring-offset-1
+    ${
+      isCollapsed
+        ? "justify-center w-10 h-10 mx-auto px-0 py-0"
+        : "justify-between px-3 py-2.5 w-full"
+    }
     ${
       disabled
         ? "opacity-50 pointer-events-none cursor-not-allowed"
         : isActive
-        ? "bg-[#FCF2F3] dark:bg-rose-950/30 text-[#B22234] dark:text-rose-400 font-bold border border-[#F8D7DA] dark:border-rose-900/40 shadow-2xs"
-        : "text-[#52525b] dark:text-zinc-400 hover:text-[#18181b] dark:hover:text-zinc-100 hover:bg-[#F4F4F5] dark:hover:bg-zinc-800/60 border border-transparent"
+        ? "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-900 dark:text-zinc-100 font-semibold shadow-2xs"
+        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
     }
     ${className}
   `;
 
-  const content = (
+  const content = isCollapsed ? (
+    <>
+      {Icon && (
+        <Icon
+          className={`w-4 h-4 shrink-0 transition-colors ${
+            isActive
+              ? "text-[#B22234] dark:text-rose-400"
+              : "text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300"
+          }`}
+          strokeWidth={isActive ? 2 : 1.75}
+        />
+      )}
+
+      {/* Collapsed Badge Dot */}
+      {badge !== undefined && (
+        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#B22234] ring-2 ring-white dark:ring-zinc-900" />
+      )}
+    </>
+  ) : (
     <>
       <div className="flex items-center gap-2.5 min-w-0">
-        {/* Left active indicator pill */}
-        {isActive && (
-          <span className="absolute left-0 top-2 bottom-2 w-1 bg-[#B22234] rounded-r-md" />
-        )}
-
         {Icon && (
           <Icon
             className={`w-4 h-4 shrink-0 transition-colors ${
               isActive
                 ? "text-[#B22234] dark:text-rose-400"
-                : "text-[#71717a] dark:text-zinc-400 group-hover:text-[#B22234] dark:group-hover:text-rose-400"
+                : "text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-700 dark:group-hover:text-zinc-300"
             }`}
-            strokeWidth={1.75}
+            strokeWidth={isActive ? 2 : 1.75}
           />
         )}
         <span className="truncate">{label}</span>
@@ -76,7 +96,12 @@ export function NavItem({
 
   if (href && !disabled) {
     return (
-      <Link href={href} onClick={onClick} className={baseClasses}>
+      <Link
+        href={href}
+        onClick={onClick}
+        prefetch={true}
+        className={baseClasses}
+      >
         {content}
       </Link>
     );
@@ -87,7 +112,7 @@ export function NavItem({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full text-left ${baseClasses}`}
+      className={baseClasses}
     >
       {content}
     </button>

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { DashboardSidebar } from "@/components/organisms/DashboardSidebar";
+import { ThemeToggle } from "@/components/atoms/ThemeToggle";
 import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -17,11 +18,32 @@ export function DashboardTemplate({
   const pathname = usePathname();
   const activePath = currentPath || pathname || "/dashboard";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // Muat status collapse tersimpan dari localStorage
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sidebar_collapsed");
+      if (saved !== null) {
+        setIsCollapsed(saved === "true");
+      }
+    } catch (_) { }
+  }, []);
+
+  const toggleCollapsed = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("sidebar_collapsed", String(next));
+      } catch (_) { }
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#F9F9F8] dark:bg-[#09090b] text-[#18181b] dark:text-zinc-100 flex flex-col md:flex-row relative">
-      {/* Mobile Topbar */}
-      <header className="md:hidden flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border-b border-[#E4E4E7] dark:border-zinc-800 sticky top-0 z-40">
+      {/* Mobile Topbar (Hanya muncul di layar hp/mobile < 768px, tersembunyi total di desktop) */}
+      <header className="hidden max-md:flex md:!hidden items-center justify-between px-4 py-3 bg-white dark:bg-[#09090b] border-b border-[#E4E4E7] dark:border-zinc-800 sticky top-0 z-40">
         <div className="flex items-center gap-2">
           <span className="font-extrabold text-sm tracking-wider text-[#18181b] dark:text-zinc-100">
             ROBOTIKA UNS
@@ -30,14 +52,17 @@ export function DashboardTemplate({
             ADMIN
           </span>
         </div>
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-[#52525b] dark:text-zinc-400 hover:text-[#18181b] dark:hover:text-zinc-100 transition-colors"
-          aria-label="Toggle Navigation Menu"
-        >
-          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-[#52525b] dark:text-zinc-400 hover:text-[#18181b] dark:hover:text-zinc-100 transition-colors"
+            aria-label="Toggle Navigation Menu"
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </header>
 
       {/* Mobile Sidebar Overlay */}
@@ -48,19 +73,38 @@ export function DashboardTemplate({
         />
       )}
 
-      {/* Sidebar: Responsive Drawer on Mobile, Fixed/Sticky on Desktop */}
+      {/* Sidebar: Responsive Drawer on Mobile, Sticky on Desktop */}
       <div
         className={`
           fixed inset-y-0 left-0 z-50 transform md:relative md:translate-x-0 transition-transform duration-200 ease-in-out
           ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
-        <DashboardSidebar currentPath={activePath} />
+        <DashboardSidebar
+          currentPath={activePath}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={toggleCollapsed}
+        />
       </div>
 
       {/* Main Content Area */}
       <main className="flex-1 min-w-0 flex flex-col overflow-y-auto min-h-screen">
-        {children}
+        {/* Desktop Top Header Bar (Menyatu dalam page flow, tidak tumpang tindih) */}
+        <header className="hidden md:flex items-center justify-end px-4 sm:px-8 pt-4 pb-0 shrink-0">
+          <div className="max-w-6xl w-full mx-auto flex items-center justify-end">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 rounded-lg shadow-2xs">
+              <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 select-none">
+                Tema
+              </span>
+              <ThemeToggle className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800" />
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <div className="flex-1 flex flex-col">
+          {children}
+        </div>
       </main>
     </div>
   );

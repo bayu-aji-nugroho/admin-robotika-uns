@@ -6,15 +6,13 @@ interface NavSectionHeaderProps {
 }
 
 export function NavSectionHeader({ title, className = "" }: NavSectionHeaderProps) {
-  // Format title with '#' prefix if not already present
-  const formattedTitle = title.startsWith("#") ? title : `# ${title}`;
+  const cleanTitle = title.replace(/^#\s*/, "");
 
   return (
     <div
-      className={`px-3 py-1.5 flex items-center gap-1.5 text-[11px] font-mono font-bold tracking-wider text-[#71717a] uppercase select-none ${className}`}
+      className={`px-3 py-1.5 text-[11px] font-semibold tracking-wider text-zinc-400 dark:text-zinc-500 uppercase select-none ${className}`}
     >
-      <span className="text-[#B22234] font-extrabold select-none">#</span>
-      <span>{formattedTitle.replace(/^#\s*/, "")}</span>
+      {cleanTitle}
     </div>
   );
 }

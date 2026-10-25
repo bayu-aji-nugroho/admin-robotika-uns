@@ -4,13 +4,7 @@ import React, { useEffect, useState } from "react";
 import { SidebarHeader } from "@/components/molecules/SidebarHeader";
 import { NavSection } from "@/components/molecules/NavSection";
 import { NavItem } from "@/components/atoms/NavItem";
-import {
-  Sliders,
-  Users,
-  BarChart3,
-  LogOut,
-  Loader2,
-} from "lucide-react";
+import { Sliders, Users, BarChart3 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { ThemeToggle } from "@/components/atoms/ThemeToggle";
@@ -27,12 +21,16 @@ interface DashboardSidebarProps {
   currentPath?: string;
   className?: string;
   initialProfile?: UserProfile;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export function DashboardSidebar({
   currentPath = "/dashboard",
   className = "",
   initialProfile,
+  isCollapsed = false,
+  onToggleCollapse,
 }: DashboardSidebarProps) {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile>(
@@ -43,8 +41,63 @@ export function DashboardSidebar({
       divisionRole: "pengurus",
     }
   );
-  const [applicantCount, setApplicantCount] = useState<number>(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(270);
+  const [isResizing, setIsResizing] = useState<boolean>(false);
+
+  // Muat lebar kustom sidebar dari localStorage jika ada
+  useEffect(() => {
+    try {
+      const savedWidth = localStorage.getItem("sidebar_custom_width");
+      if (savedWidth) {
+        const parsed = parseInt(savedWidth, 10);
+        if (!isNaN(parsed) && parsed >= 200 && parsed <= 450) {
+          setSidebarWidth(parsed);
+        }
+      }
+    } catch (_) { }
+  }, []);
+
+  // Event listener untuk resize dengan kursor mouse
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = e.clientX;
+      if (newWidth < 130) {
+        if (!isCollapsed && onToggleCollapse) {
+          onToggleCollapse();
+        }
+      } else {
+        if (isCollapsed && onToggleCollapse) {
+          onToggleCollapse();
+        }
+        const clampedWidth = Math.min(Math.max(newWidth, 200), 450);
+        setSidebarWidth(clampedWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      try {
+        localStorage.setItem("sidebar_custom_width", String(sidebarWidth));
+      } catch (_) { }
+    };
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, isCollapsed, onToggleCollapse, sidebarWidth]);
 
   useEffect(() => {
     async function loadUser() {
@@ -73,15 +126,6 @@ export function DashboardSidebar({
             avatarUrl:
               user.user_metadata?.avatar_url || user.user_metadata?.picture,
           });
-
-          // Ambil jumlah pendaftar terkini
-          const { count } = await supabase
-            .from("registrations")
-            .select("*", { count: "exact", head: true });
-
-          if (count !== null && count !== undefined) {
-            setApplicantCount(count);
-          }
         }
       } catch {
         // Biarkan default fallback profile
@@ -107,39 +151,50 @@ export function DashboardSidebar({
 
   return (
     <aside
-      className={`w-64 sm:w-72 h-screen sticky top-0 flex flex-col bg-white dark:bg-zinc-900 border-r border-[#E4E4E7] dark:border-zinc-800 shrink-0 z-30 select-none ${className}`}
+      style={{
+        width: isCollapsed ? "72px" : `${sidebarWidth}px`,
+      }}
+      className={`h-screen sticky top-0 flex flex-col bg-white dark:bg-zinc-900 border-r border-[#E4E4E7] dark:border-zinc-800 shrink-0 z-30 select-none overflow-x-hidden ${isResizing ? "transition-none" : "transition-[width] duration-200 ease-in-out"
+        } ${className}`}
     >
-      {/* 1. Header: Icon Gambar Akun, Nama, & Dua Role (OPREC & Divisi) */}
+      {/* 1. Header: Card Akun & Action Icons (Avatar, Nama, Roles, Icon Logout, Icon Collapse) */}
       <SidebarHeader
         name={profile.name}
         oprecRole={profile.oprecRole}
         divisionRole={profile.divisionRole}
         avatarUrl={profile.avatarUrl}
+        isCollapsed={isCollapsed}
+        onLogout={handleLogout}
+        isLoggingOut={isLoggingOut}
+        onToggleCollapse={onToggleCollapse}
       />
 
-      {/* 2. Scrollable Menu Sections */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-6">
-        {/* Section # general [kosong] */}
-        <NavSection title="general" emptyText="Daftar menu kosong" />
+      {/* 2. Scrollable Menu Sections (Bebas dari horizontal scrollbar) */}
+      <div
+        className={`flex-1 overflow-y-auto overflow-x-hidden ${isCollapsed ? "px-2 py-3 space-y-4" : "px-4 py-5 space-y-6"
+          }`}
+      >
+        {/* Section # general (Masih dalam development) */}
+        <NavSection title="general" emptyText="Masih dalam development" isCollapsed={isCollapsed} />
 
-        {/* Section # oprec (Hanya 3: Pengaturan OPREC, Daftar Pendaftar, Statistik) */}
-        <NavSection title="oprec">
+        {/* Section # oprec */}
+        <NavSection title="oprec" isCollapsed={isCollapsed}>
           {/* 1. Pengaturan OPREC */}
           <NavItem
             label="Pengaturan OPREC"
             icon={Sliders}
             href="/dashboard/pengaturan"
             isActive={currentPath === "/dashboard/pengaturan"}
+            isCollapsed={isCollapsed}
           />
 
-          {/* 2. Daftar Pendaftar */}
+          {/* 2. Daftar Pendaftar (Tanpa label [n baru]) */}
           <NavItem
             label="Daftar Pendaftar"
             icon={Users}
             href="/dashboard"
             isActive={currentPath === "/dashboard"}
-            badge={applicantCount > 0 ? `${applicantCount} Baru` : undefined}
-            badgeVariant="subtle"
+            isCollapsed={isCollapsed}
           />
 
           {/* 3. Statistik */}
@@ -148,36 +203,21 @@ export function DashboardSidebar({
             icon={BarChart3}
             href="#statistik"
             isActive={false}
+            isCollapsed={isCollapsed}
           />
         </NavSection>
       </div>
 
-      {/* 3. Bottom Footer (Tema & Tombol Keluar) */}
-      <div className="p-3 border-t border-[#E4E4E7] dark:border-zinc-800 bg-white dark:bg-zinc-900 space-y-2">
-        <div className="flex items-center justify-between px-2 py-0.5 text-xs text-[#71717a] dark:text-zinc-400">
-          <span>Tema</span>
-          <ThemeToggle />
-        </div>
-
-        {/* Tombol Keluar / Kembali ke Halaman Masuk */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          disabled={isLoggingOut}
-          className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-[#52525b] dark:text-zinc-400 hover:text-[#B22234] dark:hover:text-rose-400 hover:bg-[#FCF2F3] dark:hover:bg-rose-950/20 rounded-lg transition-colors group cursor-pointer disabled:opacity-60"
-        >
-          <div className="flex items-center gap-2">
-            {isLoggingOut ? (
-              <Loader2 className="w-4 h-4 text-[#B22234] dark:text-rose-400 animate-spin" />
-            ) : (
-              <LogOut className="w-4 h-4 text-[#71717a] dark:text-zinc-400 group-hover:text-[#B22234] dark:group-hover:text-rose-400 transition-colors" />
-            )}
-            <span>{isLoggingOut ? "Keluar..." : "Keluar ke Halaman Masuk"}</span>
-          </div>
-          <span className="text-[10px] font-mono text-zinc-400 group-hover:text-[#B22234] dark:group-hover:text-rose-400">
-            ESC
-          </span>
-        </button>
+      {/* Resizable Drag Handle pada sisi kanan border (Desktop only) */}
+      <div
+        onMouseDown={(e) => {
+          e.preventDefault();
+          setIsResizing(true);
+        }}
+        title="Tarik kursor untuk mengatur lebar sidebar"
+        className="hidden md:block absolute top-0 -right-1 w-2 h-full cursor-col-resize hover:bg-[#B22234]/40 active:bg-[#B22234] transition-colors z-40 select-none group"
+      >
+        <div className="w-0.5 h-8 bg-zinc-300 dark:bg-zinc-600 rounded-full mx-auto my-auto relative top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
     </aside>
   );

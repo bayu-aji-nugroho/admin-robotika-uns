@@ -21,6 +21,13 @@ export const metadata: Metadata = {
   description: "Sistem Autentikasi dan Portal Masuk Resmi Google SSO untuk Pengurus, Riset, dan Anggota Robotika UNS.",
 };
 
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F9F9F8" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: {
@@ -30,7 +37,7 @@ export default function RootLayout({
     <html
       lang="id"
       suppressHydrationWarning
-      className={`${leagueSpartan.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${leagueSpartan.variable} ${jetbrainsMono.variable} h-full antialiased bg-[#F9F9F8] dark:bg-[#09090b]`}
     >
       <head>
         <script
@@ -49,7 +56,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[#F9F9F8] dark:bg-[#09090b] text-[#18181b] dark:text-zinc-100 transition-colors duration-150">
+      <body className="min-h-full flex flex-col bg-[#F9F9F8] dark:bg-[#09090b] text-[#18181b] dark:text-zinc-100 transition-colors duration-150 overscroll-none">
         {children}
       </body>
     </html>

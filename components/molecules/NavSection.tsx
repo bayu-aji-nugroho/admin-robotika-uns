@@ -6,6 +6,7 @@ interface NavSectionProps {
   children?: React.ReactNode;
   emptyText?: string;
   className?: string;
+  isCollapsed?: boolean;
 }
 
 export function NavSection({
@@ -13,8 +14,19 @@ export function NavSection({
   children,
   emptyText,
   className = "",
+  isCollapsed = false,
 }: NavSectionProps) {
   const hasChildren = React.Children.count(children) > 0;
+
+  if (isCollapsed) {
+    if (!hasChildren) return null;
+    return (
+      <div className={`space-y-1 ${className}`}>
+        <div className="my-2 border-t border-zinc-200 dark:border-zinc-800" />
+        <div className="space-y-1.5 flex flex-col items-center">{children}</div>
+      </div>
+    );
+  }
 
   return (
     <div className={`space-y-1 ${className}`}>
@@ -23,9 +35,9 @@ export function NavSection({
         {hasChildren ? (
           children
         ) : (
-          <div className="px-3 py-2 text-xs text-[#71717a] dark:text-zinc-400 italic rounded-lg bg-zinc-50/70 dark:bg-zinc-800/40 border border-dashed border-[#E4E4E7] dark:border-zinc-800 flex items-center justify-between">
-            <span>{emptyText || "Tidak ada menu"}</span>
-            <span className="font-mono text-[10px] text-zinc-400 dark:text-zinc-500 font-semibold">[kosong]</span>
+          <div className="px-3 py-2 text-xs text-zinc-400 dark:text-zinc-500 flex items-center justify-between select-none rounded-lg bg-zinc-50/60 dark:bg-zinc-800/30 border border-zinc-200/50 dark:border-zinc-800/50">
+            <span>{emptyText || "Masih dalam development"}</span>
+            <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500">segera</span>
           </div>
         )}
       </div>

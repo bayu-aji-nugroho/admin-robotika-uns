@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, Filter, X, RotateCcw, RefreshCw } from "lucide-react";
+import { Search, Filter, X, RotateCcw, RefreshCw, ChevronRight } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 
@@ -9,10 +9,116 @@ export interface RegistrationItem {
   id: string;
   full_name: string | null;
   nim: string | null;
-  primary_division_name: string | null;
+  primary_division_name?: string | null;
   status?: string | null;
+  current_step?: number | null;
+  registration_code?: string | null;
   created_at?: string | null;
   submitted_at?: string | null;
+}
+
+export type DecisionStatusType = "accepted" | "rejected" | "pending" | "incomplete";
+
+export interface HasilOprecMeta {
+  type: DecisionStatusType;
+  label: string;
+  bgColor: string;
+  borderColor: string;
+  isAutoRejected: boolean;
+}
+
+
+export function getHasilOprec(item: RegistrationItem): HasilOprecMeta {
+  const step =
+    typeof item.current_step === "number"
+      ? item.current_step
+      : Number(item.current_step) || 0;
+  const hasRegCode = Boolean(
+    item.registration_code && item.registration_code.trim().length > 0
+  );
+
+  const isComplete = step >= 6 && hasRegCode;
+
+  // 1. Jika data belum lengkap -> indikator oranye (Belum Lengkap)
+  if (!isComplete) {
+    return {
+      type: "incomplete",
+      label: "Belum Lengkap",
+      bgColor: "bg-amber-500 dark:bg-amber-500",
+      borderColor: "border-amber-600/30 dark:border-amber-400/30",
+      isAutoRejected: false,
+    };
+  }
+
+  // 2. Jika sudah melengkapi current step dan memiliki kode registrasi:
+  // Cek jika ada keputusan eksplisit dari admin
+  const rawStatus = (item.status || "").toLowerCase().trim();
+  if (
+    rawStatus === "accepted" ||
+    rawStatus === "diterima" ||
+    rawStatus === "lolos" ||
+    rawStatus === "acc"
+  ) {
+    return {
+      type: "accepted",
+      label: "Diterima",
+      bgColor: "bg-emerald-500 dark:bg-emerald-400",
+      borderColor: "border-emerald-600/30 dark:border-emerald-300/30",
+      isAutoRejected: false,
+    };
+  }
+
+  if (
+    rawStatus === "rejected" ||
+    rawStatus === "ditolak" ||
+    rawStatus === "tolak"
+  ) {
+    return {
+      type: "rejected",
+      label: "Ditolak",
+      bgColor: "bg-[#B22234] dark:bg-rose-500",
+      borderColor: "border-rose-700/30 dark:border-rose-400/30",
+      isAutoRejected: false,
+    };
+  }
+
+  // Default saat sudah selesai melengkapi pendaftaran: Dipertimbangkan (abu-abu)
+  return {
+    type: "pending",
+    label: "Dipertimbangkan",
+    bgColor: "bg-zinc-400 dark:bg-zinc-500",
+    borderColor: "border-zinc-500/30 dark:border-zinc-400/30",
+    isAutoRejected: false,
+  };
+}
+
+/**
+ * Mendapatkan status tahap pendaftaran peserta berdasarkan field current_step di database
+ */
+export function getParticipantStep(item: RegistrationItem): {
+  step: number;
+  label: string;
+  isComplete: boolean;
+} {
+  const step =
+    typeof item.current_step === "number"
+      ? item.current_step
+      : Number(item.current_step) || 0;
+  const hasRegCode = Boolean(
+    item.registration_code && item.registration_code.trim().length > 0
+  );
+  const isComplete = step >= 6 && hasRegCode;
+
+  // Format label bersih tanpa spasi ganjil: "Lengkap (6/6)" / "Belum Lengkap (n/6)"
+  const label = isComplete
+    ? "Lengkap (6/6)"
+    : `Belum Lengkap (${step}/6)`;
+
+  return {
+    step,
+    label,
+    isComplete,
+  };
 }
 
 interface ApplicantListProps {
@@ -24,47 +130,39 @@ export function ApplicantList({ initialRegistrations }: ApplicantListProps) {
   const [registrations, setRegistrations] =
     useState<RegistrationItem[]>(initialRegistrations);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDivision, setSelectedDivision] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Ekstrak daftar divisi unik secara dinamis dari data pendaftar
-  const availableDivisions = useMemo(() => {
-    const set = new Set<string>();
-    registrations.forEach((item) => {
-      if (item.primary_division_name) {
-        set.add(item.primary_division_name);
-      }
-    });
-    return Array.from(set).sort();
-  }, [registrations]);
-
-  // Filter data berdasarkan query pencarian dan divisi terpilih
+  // Filter data berdasarkan query pencarian dan status hasil oprec terpilih
   const filteredRegistrations = useMemo(() => {
     return registrations.filter((item) => {
       const name = item.full_name?.toLowerCase() || "";
       const nim = item.nim?.toLowerCase() || "";
-      const division = item.primary_division_name?.toLowerCase() || "";
+      const stepInfo = getParticipantStep(item);
+      const stepText = stepInfo.label.toLowerCase();
+      const code = item.registration_code?.toLowerCase() || "";
       const query = searchQuery.trim().toLowerCase();
 
       const matchesSearch =
         !query ||
         name.includes(query) ||
         nim.includes(query) ||
-        division.includes(query);
+        stepText.includes(query) ||
+        code.includes(query);
 
-      const matchesDivision =
-        selectedDivision === "all" ||
-        item.primary_division_name === selectedDivision;
+      const hasilMeta = getHasilOprec(item);
+      const matchesStatus =
+        selectedStatus === "all" || hasilMeta.type === selectedStatus;
 
-      return matchesSearch && matchesDivision;
+      return matchesSearch && matchesStatus;
     });
-  }, [registrations, searchQuery, selectedDivision]);
+  }, [registrations, searchQuery, selectedStatus]);
 
-  const hasActiveFilter = searchQuery.trim() !== "" || selectedDivision !== "all";
+  const hasActiveFilter = searchQuery.trim() !== "" || selectedStatus !== "all";
 
   const handleResetFilter = () => {
     setSearchQuery("");
-    setSelectedDivision("all");
+    setSelectedStatus("all");
   };
 
   const handleRefresh = async () => {
@@ -75,9 +173,9 @@ export function ApplicantList({ initialRegistrations }: ApplicantListProps) {
       const { data, error } = await supabase
         .from("registrations")
         .select(
-          "id, full_name, nim, primary_division_name, status, created_at, submitted_at"
+          "id, full_name, nim, primary_division_name, status, current_step, registration_code, created_at, submitted_at"
         )
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
 
       if (!error && data) {
         setRegistrations(data);
@@ -91,129 +189,148 @@ export function ApplicantList({ initialRegistrations }: ApplicantListProps) {
   };
 
   return (
-    <div className="space-y-4">
-      {/* 1. Toolbar (Search, Filter, Refresh, dan Total Pendaftar) */}
-      <div className="bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          {/* Sisi Kiri: Search Input & Filter Dropdown */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Cari nama, NIM, atau divisi..."
-                className="w-full pl-9 pr-8 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700/80 rounded-lg text-xs sm:text-sm text-[#18181b] dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  aria-label="Hapus kata kunci pencarian"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded cursor-pointer"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {/* Filter Divisi */}
-            <div className="relative sm:w-56 shrink-0">
-              <Filter className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <select
-                value={selectedDivision}
-                onChange={(e) => setSelectedDivision(e.target.value)}
-                className="w-full pl-8 pr-8 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-700/80 rounded-lg text-xs sm:text-sm text-[#18181b] dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors cursor-pointer appearance-none"
-              >
-                <option value="all">Semua Divisi</option>
-                {availableDivisions.map((div) => (
-                  <option key={div} value={div}>
-                    {div}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[10px]">
-                ▼
-              </div>
-            </div>
-
-            {/* Tombol Reset jika filter aktif */}
-            {hasActiveFilter && (
+    <div className="bg-white dark:bg-[#121215] border border-zinc-200/90 dark:border-zinc-800/80 rounded-xl overflow-hidden shadow-xs">
+      {/* 1. Integrated Toolbar (Search, Filter Hasil OPREC, Total Counter, Refresh) */}
+      <div className="p-3.5 sm:p-4 border-b border-zinc-100 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-[#121215]">
+        {/* Sisi Kiri: Search Input & Filter Dropdown */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari nama, NIM, atau berkas pendaftar..."
+              className="w-full pl-9 pr-8 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700/70 rounded-lg text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors"
+            />
+            {searchQuery && (
               <button
                 type="button"
-                onClick={handleResetFilter}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#B22234] dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-950/50 transition-colors cursor-pointer shrink-0"
+                onClick={() => setSearchQuery("")}
+                aria-label="Hapus kata kunci pencarian"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded cursor-pointer"
               >
-                <RotateCcw className="w-3 h-3" />
-                <span>Reset</span>
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          {/* Sisi Kanan: Total Pendaftar & Tombol Refresh */}
-          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
-            <div className="text-xs text-zinc-600 dark:text-zinc-300">
-              Total Pendaftar:{" "}
-              <span className="font-bold text-[#18181b] dark:text-zinc-100">
-                {registrations.length}
-              </span>
-              {hasActiveFilter && (
-                <span className="text-[11px] text-zinc-400 ml-1">
-                  (terfilter: {filteredRegistrations.length})
-                </span>
-              )}
+          {/* Filter Hasil OPREC */}
+          <div className="relative sm:w-48 shrink-0">
+            <Filter className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              aria-label="Filter hasil OPREC peserta"
+              className="w-full pl-8 pr-8 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700/70 rounded-lg text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors cursor-pointer appearance-none"
+            >
+              <option value="all">Semua Hasil OPREC</option>
+              <option value="accepted">Diterima (Hijau)</option>
+              <option value="pending">Dipertimbangkan (Abu-abu)</option>
+              <option value="incomplete">Belum Lengkap (Oranye)</option>
+              <option value="rejected">Ditolak (Merah)</option>
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[10px]">
+              ▼
             </div>
+          </div>
 
-            {/* Tombol Refresh */}
+          {/* Tombol Reset jika filter aktif */}
+          {hasActiveFilter && (
             <button
               type="button"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              title="Segarkan data pendaftar"
-              aria-label="Segarkan data pendaftar"
-              className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
+              onClick={handleResetFilter}
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#B22234] dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-950/50 transition-colors cursor-pointer shrink-0"
             >
-              <RefreshCw
-                className={`w-4 h-4 ${
-                  isRefreshing ? "animate-spin text-[#B22234] dark:text-rose-400" : ""
-                }`}
-              />
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
             </button>
+          )}
+        </div>
+
+        {/* Sisi Kanan: Total Pendaftar & Tombol Refresh */}
+        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+          <div className="text-xs text-zinc-500 dark:text-zinc-400">
+            Total Peserta:{" "}
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono">
+              {registrations.length}
+            </span>
+            {hasActiveFilter && (
+              <span className="text-[11px] text-zinc-400 ml-1">
+                (hasil: {filteredRegistrations.length})
+              </span>
+            )}
           </div>
+
+          {/* Tombol Refresh */}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            title="Segarkan data pendaftar"
+            aria-label="Segarkan data pendaftar"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-[#B22234] dark:text-rose-400" : ""
+                }`}
+            />
+          </button>
         </div>
       </div>
 
       {/* 2. Output List Pendaftar (Scrollable dengan Sticky Header) */}
-      <div className="bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 rounded-xl overflow-hidden shadow-xs">
-        {filteredRegistrations.length > 0 ? (
-          <div className="overflow-x-auto max-h-[62vh] overflow-y-auto">
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 z-10 bg-zinc-50 dark:bg-zinc-950 border-b border-[#E4E4E7] dark:border-zinc-800">
-                <tr className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                  <th
-                    scope="col"
-                    className="py-3 px-4 sm:px-6 w-1/3 bg-zinc-50 dark:bg-zinc-950"
-                  >
-                    Nama
-                  </th>
-                  <th
-                    scope="col"
-                    className="py-3 px-4 sm:px-6 w-1/3 bg-zinc-50 dark:bg-zinc-950"
-                  >
-                    Divisi
-                  </th>
-                  <th
-                    scope="col"
-                    className="py-3 px-4 sm:px-6 w-1/3 bg-zinc-50 dark:bg-zinc-950"
-                  >
-                    NIM
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E4E4E7] dark:divide-zinc-800 text-xs sm:text-sm">
-                {filteredRegistrations.map((item) => (
+      {filteredRegistrations.length > 0 ? (
+        <div className="overflow-x-auto max-h-[64vh] overflow-y-auto">
+          <table className="w-full text-left border-collapse">
+            <thead className="sticky top-0 z-10 bg-zinc-50/90 dark:bg-zinc-900/90 backdrop-blur-xs border-b border-zinc-200 dark:border-zinc-800">
+              <tr className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                <th
+                  scope="col"
+                  className="py-3 px-3 sm:px-4 text-center w-12 sm:w-14 font-mono select-none"
+                >
+                  No
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 sm:px-5"
+                >
+                  Nama
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 sm:px-5 w-32 sm:w-36"
+                >
+                  NIM
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 sm:px-5 w-44 sm:w-52"
+                >
+                  Tahap Pendaftaran
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 sm:px-5 w-40 sm:w-48"
+                >
+                  Hasil OPREC
+                </th>
+                <th
+                  scope="col"
+                  aria-label="Aksi"
+                  className="py-3 pr-4 sm:pr-5 w-10 text-right"
+                >
+                  <span className="sr-only">Rincian</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/60 text-xs sm:text-sm">
+              {filteredRegistrations.map((item, index) => {
+                const stepInfo = getParticipantStep(item);
+                const hasilMeta = getHasilOprec(item);
+
+                return (
                   <tr
                     key={item.id}
                     role="button"
@@ -228,55 +345,90 @@ export function ApplicantList({ initialRegistrations }: ApplicantListProps) {
                       }
                     }}
                     title={`Klik untuk melihat rincian ${item.full_name || item.nim}`}
-                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 active:bg-zinc-100 dark:active:bg-zinc-800/70 transition-colors cursor-pointer group focus-visible:outline-hidden focus-visible:bg-zinc-100 dark:focus-visible:bg-zinc-800"
+                    className="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 active:bg-zinc-100 dark:active:bg-zinc-800/70 transition-colors cursor-pointer group focus-visible:outline-hidden focus-visible:bg-zinc-100 dark:focus-visible:bg-zinc-800"
                   >
-                    {/* 1. Nama */}
-                    <td className="py-3.5 px-4 sm:px-6 font-semibold text-[#18181b] dark:text-zinc-100 group-hover:text-[#B22234] dark:group-hover:text-rose-400 transition-colors">
+                    {/* 1. Nomor Urut */}
+                    <td className="py-3.5 px-3 sm:px-4 text-center font-mono text-xs text-zinc-400 dark:text-zinc-500 font-medium select-none tabular-nums">
+                      {index + 1}
+                    </td>
+
+                    {/* 2. Nama */}
+                    <td className="py-3.5 px-4 sm:px-5 font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-[#B22234] dark:group-hover:text-rose-400 transition-colors">
                       {item.full_name || "Nama tidak dicantumkan"}
                     </td>
 
-                    {/* 2. Divisi */}
-                    <td className="py-3.5 px-4 sm:px-6 text-zinc-600 dark:text-zinc-300">
-                      {item.primary_division_name || "-"}
-                    </td>
-
                     {/* 3. NIM */}
-                    <td className="py-3.5 px-4 sm:px-6 font-mono text-zinc-600 dark:text-zinc-400">
+                    <td className="py-3.5 px-4 sm:px-5 font-mono text-zinc-600 dark:text-zinc-400 text-xs sm:text-sm tabular-nums">
                       {item.nim || "-"}
                     </td>
+
+                    {/* 4. Tahap Pendaftaran */}
+                    <td className="py-3.5 px-4 sm:px-5">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span
+                          className={`font-medium ${
+                            stepInfo.isComplete
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-amber-600 dark:text-amber-400"
+                          }`}
+                        >
+                          {stepInfo.isComplete ? "Lengkap" : "Belum Lengkap"}
+                        </span>
+                        <span className="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 tabular-nums">
+                          ({stepInfo.step}/6)
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* 5. Hasil OPREC */}
+                    <td className="py-3.5 px-4 sm:px-5">
+                      <div className="inline-flex items-center gap-2">
+                        <span
+                          className={`w-2.5 h-2.5 rounded-[2px] shrink-0 ${hasilMeta.bgColor} border ${hasilMeta.borderColor} shadow-2xs`}
+                        />
+                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          {hasilMeta.label}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* 6. Action Icon > (Indikator Klik) */}
+                    <td className="py-3.5 pr-4 sm:pr-5 text-right w-10">
+                      <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-[#B22234] dark:group-hover:text-rose-400 group-hover:translate-x-1 transition-all inline-block" />
+                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          /* Empty State */
-          <div className="py-12 px-4 text-center space-y-2">
-            <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-              {hasActiveFilter
-                ? "Tidak ada pendaftar yang cocok"
-                : "Belum ada pendaftar"}
-            </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-              {hasActiveFilter
-                ? "Coba ubah kata kunci pencarian atau ganti filter divisi."
-                : "Data pendaftar baru yang mengirimkan formulir akan otomatis muncul di sini."}
-            </p>
-            {hasActiveFilter && (
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleResetFilter}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#B22234] dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-md hover:bg-rose-100 dark:hover:bg-rose-950/70 transition-colors cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Reset Filter</span>
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* Empty State */
+        <div className="py-12 px-4 text-center space-y-2">
+          <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+            {hasActiveFilter
+              ? "Tidak ada pendaftar yang cocok"
+              : "Belum ada pendaftar"}
+          </p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
+            {hasActiveFilter
+              ? "Coba ubah kata kunci pencarian atau ganti filter hasil OPREC."
+              : "Data pendaftar baru yang mengirimkan formulir akan otomatis muncul di sini."}
+          </p>
+          {hasActiveFilter && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleResetFilter}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#B22234] dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-md hover:bg-rose-100 dark:hover:bg-rose-950/70 transition-colors cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Filter</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

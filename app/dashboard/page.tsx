@@ -23,26 +23,29 @@ export default async function DashboardRoute() {
     redirect("/");
   }
 
-  // Lapisan keamanan kedua di server: verifikasi whitelist database
-  const { data: adminRecord } = await supabase
-    .from("admin_whitelist")
-    .select("id, is_active")
-    .eq("email", user.email.toLowerCase())
-    .eq("is_active", true)
-    .maybeSingle();
+  // Jalankan verifikasi whitelist dan pengambilan data pendaftar secara paralel
+  const [adminRecordResult, registrationsResult] = await Promise.all([
+    supabase
+      .from("admin_whitelist")
+      .select("id, is_active")
+      .eq("email", user.email.toLowerCase())
+      .eq("is_active", true)
+      .maybeSingle(),
+    supabase
+      .from("registrations")
+      .select(
+        "id, full_name, nim, primary_division_name, status, current_step, registration_code, created_at, submitted_at"
+      )
+      .order("created_at", { ascending: true }),
+  ]);
+
+  const adminRecord = adminRecordResult.data;
+  const registrations = registrationsResult.data;
 
   if (!adminRecord) {
     await supabase.auth.signOut();
     redirect(`/?error=unauthorized_email&email=${encodeURIComponent(user.email)}`);
   }
-
-  // Ambil data pendaftar dari tabel registrations
-  const { data: registrations } = await supabase
-    .from("registrations")
-    .select(
-      "id, full_name, nim, primary_division_name, status, created_at, submitted_at"
-    )
-    .order("created_at", { ascending: false });
 
   return <DashboardPage initialRegistrations={registrations || []} />;
 }

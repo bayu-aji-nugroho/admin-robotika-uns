@@ -60,7 +60,7 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
   let query = supabase
     .from("registrations")
     .select(
-      "id, registration_code, nim, full_name, user_email, status, fakultas, prodi, angkatan, whatsapp, primary_division_name, primary_reason, secondary_division_name, secondary_reason, cv_file_name, cv_file_url, cv_storage_path, submitted_at, created_at"
+      "id, user_id, registration_code, nim, full_name, user_email, status, current_step, fakultas, prodi, angkatan, whatsapp, primary_division_name, primary_reason, secondary_division_name, secondary_reason, cv_file_name, cv_file_url, cv_storage_path, submitted_at, created_at"
     );
 
   if (isUuid) {

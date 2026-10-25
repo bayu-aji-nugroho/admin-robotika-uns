@@ -24,13 +24,23 @@ export default async function PengaturanOprecRoute() {
     redirect("/");
   }
 
-  // Lapisan keamanan kedua di server: verifikasi whitelist database
-  const { data: adminRecord } = await supabase
-    .from("admin_whitelist")
-    .select("id, is_active")
-    .eq("email", user.email.toLowerCase())
-    .eq("is_active", true)
-    .maybeSingle();
+  // Jalankan verifikasi whitelist dan pengambilan data pengaturan secara paralel
+  const [adminRecordResult, settingsResult] = await Promise.all([
+    supabase
+      .from("admin_whitelist")
+      .select("id, is_active")
+      .eq("email", user.email.toLowerCase())
+      .eq("is_active", true)
+      .maybeSingle(),
+    supabase
+      .from("admin_settings")
+      .select("id, is_oprec, label, updated_at")
+      .eq("id", 1)
+      .maybeSingle(),
+  ]);
+
+  const adminRecord = adminRecordResult.data;
+  const settings = settingsResult.data;
 
   if (!adminRecord) {
     await supabase.auth.signOut();
@@ -38,13 +48,6 @@ export default async function PengaturanOprecRoute() {
       `/?error=unauthorized_email&email=${encodeURIComponent(user.email)}`
     );
   }
-
-  // Ambil data pengaturan OPREC dari tabel admin_settings
-  const { data: settings } = await supabase
-    .from("admin_settings")
-    .select("id, is_oprec, label, updated_at")
-    .eq("id", 1)
-    .maybeSingle();
 
   return (
     <OprecSettingsPage

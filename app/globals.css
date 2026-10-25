@@ -19,6 +19,16 @@
   --color-page-base: #F7FAFD;
 }
 
+.dark {
+  --color-heading: #f4f4f5;
+  --color-muted-dark: #a1a1aa;
+  --color-muted-light: #71717a;
+  --color-border-canvas: #27272a;
+  --color-surface: #18181b;
+  --color-canvas: #09090b;
+  --color-page-base: #09090b;
+}
+
 @theme {
   --font-sans: var(--font-league-spartan), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -39,12 +49,25 @@
   --color-page-base: #F7FAFD;
 }
 
+html {
+  background-color: var(--color-canvas);
+  color-scheme: light;
+  overscroll-behavior-y: none;
+}
+
+html.dark,
+:root.dark,
+.dark {
+  color-scheme: dark;
+}
+
 body {
   background-color: var(--color-canvas);
   color: var(--color-heading);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
 }
 
 /* Subtle engineering schematic grid pattern */
