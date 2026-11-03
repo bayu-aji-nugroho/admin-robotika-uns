@@ -11,6 +11,7 @@ export interface RegistrationItem {
   nim: string | null;
   primary_division_name?: string | null;
   status?: string | null;
+  assessment_status?: string | null;
   current_step?: number | null;
   registration_code?: string | null;
   created_at?: string | null;
@@ -51,8 +52,8 @@ export function getHasilOprec(item: RegistrationItem): HasilOprecMeta {
   }
 
   // 2. Jika sudah melengkapi current step dan memiliki kode registrasi:
-  // Cek jika ada keputusan eksplisit dari admin
-  const rawStatus = (item.status || "").toLowerCase().trim();
+  // Cek jika ada keputusan eksplisit dari admin (baik dari assessments maupun registrations status)
+  const rawStatus = (item.assessment_status || item.status || "").toLowerCase().trim();
   if (
     rawStatus === "accepted" ||
     rawStatus === "diterima" ||
@@ -170,12 +171,26 @@ export function ApplicantList({ initialRegistrations }: ApplicantListProps) {
     try {
       setIsRefreshing(true);
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from("registrations")
+      let { data, error } = await supabase
+        .from("view_registrations")
         .select(
-          "id, full_name, nim, primary_division_name, status, current_step, registration_code, created_at, submitted_at"
+          "id, full_name, nim, primary_division_name, status, assessment_status, current_step, registration_code, created_at, submitted_at"
         )
         .order("created_at", { ascending: true });
+
+      if (error || !data) {
+        // Fallback ke view/tabel registrations jika diperlukan
+        const fallback = await supabase
+          .from("registrations")
+          .select(
+            "id, full_name, nim, primary_division_name, status, assessment_status, current_step, registration_code, created_at, submitted_at"
+          )
+          .order("created_at", { ascending: true });
+        if (!fallback.error && fallback.data) {
+          data = fallback.data;
+          error = null;
+        }
+      }
 
       if (!error && data) {
         setRegistrations(data);

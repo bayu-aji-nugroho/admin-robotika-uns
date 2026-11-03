@@ -32,15 +32,28 @@ export default async function DashboardRoute() {
       .eq("is_active", true)
       .maybeSingle(),
     supabase
-      .from("registrations")
+      .from("view_registrations")
       .select(
-        "id, full_name, nim, primary_division_name, status, current_step, registration_code, created_at, submitted_at"
+        "id, full_name, nim, primary_division_name, status, assessment_status, current_step, registration_code, created_at, submitted_at"
       )
       .order("created_at", { ascending: true }),
   ]);
 
   const adminRecord = adminRecordResult.data;
-  const registrations = registrationsResult.data;
+  let registrations = registrationsResult.data;
+
+  // Fallback ke view registrations jika query view_registrations kosong karena cache lama
+  if (!registrations || registrationsResult.error) {
+    const fallbackResult = await supabase
+      .from("registrations")
+      .select(
+        "id, full_name, nim, primary_division_name, status, assessment_status, current_step, registration_code, created_at, submitted_at"
+      )
+      .order("created_at", { ascending: true });
+    if (fallbackResult.data) {
+      registrations = fallbackResult.data;
+    }
+  }
 
   if (!adminRecord) {
     await supabase.auth.signOut();

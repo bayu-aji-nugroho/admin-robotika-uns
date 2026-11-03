@@ -56,7 +56,7 @@ export async function DELETE(
       );
 
     let findQuery = supabase
-      .from("registrations")
+      .from("view_registrations")
       .select("id, user_id, user_email, cv_storage_path, full_name, nim, registration_code");
 
     if (isUuid) {
@@ -65,7 +65,23 @@ export async function DELETE(
       findQuery = findQuery.or(`registration_code.eq.${targetId},nim.eq.${targetId}`);
     }
 
-    const { data: applicant, error: findError } = await findQuery.maybeSingle();
+    let { data: applicant, error: findError } = await findQuery.maybeSingle();
+
+    if (!applicant || findError) {
+      let fallbackQuery = supabase
+        .from("registrations")
+        .select("id, user_id, user_email, cv_storage_path, full_name, nim, registration_code");
+      if (isUuid) {
+        fallbackQuery = fallbackQuery.eq("id", targetId);
+      } else {
+        fallbackQuery = fallbackQuery.or(`registration_code.eq.${targetId},nim.eq.${targetId}`);
+      }
+      const fallbackRes = await fallbackQuery.maybeSingle();
+      if (fallbackRes.data) {
+        applicant = fallbackRes.data;
+        findError = null;
+      }
+    }
 
     if (findError) {
       console.error("Gagal mencari data pendaftar:", findError.message);
@@ -179,17 +195,10 @@ export async function DELETE(
       console.warn("RPC delete call notice:", rpcErr);
     }
 
-    // 6. Fallback: Jika RPC belum terpasang atau belum menghapus baris tabel
+    // 6. Fallback: Hapus baris tabel applicants (otomatis CASCADE ke applicant_divisions & assessments)
     if (!rpcSucceeded) {
-      // Hapus riwayat di tabel hasil_oprec
-      await supabase
-        .from("hasil_oprec")
-        .delete()
-        .eq("registration_id", canonicalId);
-
-      // Hapus dari tabel registrations
       const { error: deleteRegError } = await supabase
-        .from("registrations")
+        .from("applicants")
         .delete()
         .eq("id", canonicalId);
 
