@@ -10,7 +10,9 @@
 !.yarn/releases
 !.yarn/versions
 
-.env.local
+# repo ini memakai npm (package-lock.json); lockfile pnpm lokal jangan ikut ter-commit
+pnpm-lock.yaml
+pnpm-workspace.yaml
 
 # testing
 /coverage
@@ -37,6 +39,10 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# supabase cli
+supabase/.temp/
+supabase/.branches/
 
 # typescript
 *.tsbuildinfo
