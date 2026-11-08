@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
+import { getAdminAccess, hasPermission } from "@/utils/adminAccess";
 
 export const instant = false;
 
@@ -35,15 +36,10 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
     redirect("/");
   }
 
-  // Lapisan keamanan kedua di server: verifikasi whitelist database
-  const { data: adminRecord } = await supabase
-    .from("admin_whitelist")
-    .select("id, is_active")
-    .eq("email", user.email.toLowerCase())
-    .eq("is_active", true)
-    .maybeSingle();
+  // Lapisan keamanan kedua di server: verifikasi whitelist & hak akses role
+  const access = await getAdminAccess(supabase, user.email);
 
-  if (!adminRecord) {
+  if (!access) {
     await supabase.auth.signOut();
     redirect(
       `/?error=unauthorized_email&email=${encodeURIComponent(user.email)}`
@@ -142,6 +138,8 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
       }}
       divisions={divisions}
       interviewQuestions={interviewQuestions}
+      canAssess={hasPermission(access, "applicants.assess")}
+      canDelete={hasPermission(access, "applicants.delete")}
     />
   );
 }

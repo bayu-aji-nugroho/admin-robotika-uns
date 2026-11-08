@@ -5,6 +5,7 @@ import { DashboardSidebar } from "@/components/organisms/DashboardSidebar";
 import { ThemeToggle } from "@/components/atoms/ThemeToggle";
 import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useLocalStorageValue } from "@/utils/useLocalStorageValue";
 
 interface DashboardTemplateProps {
   children: React.ReactNode;
@@ -18,26 +19,13 @@ export function DashboardTemplate({
   const pathname = usePathname();
   const activePath = currentPath || pathname || "/dashboard";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Muat status collapse tersimpan dari localStorage
-  React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem("sidebar_collapsed");
-      if (saved !== null) {
-        setIsCollapsed(saved === "true");
-      }
-    } catch (_) { }
-  }, []);
+  // Status collapse sidebar tersimpan di localStorage
+  const [savedCollapsed, setSavedCollapsed] = useLocalStorageValue("sidebar_collapsed");
+  const isCollapsed = savedCollapsed === "true";
 
   const toggleCollapsed = () => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem("sidebar_collapsed", String(next));
-      } catch (_) { }
-      return next;
-    });
+    setSavedCollapsed(String(!isCollapsed));
   };
 
   return (

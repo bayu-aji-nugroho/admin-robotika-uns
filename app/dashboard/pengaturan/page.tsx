@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
+import { getAdminAccess, hasPermission } from "@/utils/adminAccess";
 
 export const instant = false;
 
@@ -35,7 +36,7 @@ export default async function PengaturanOprecRoute() {
         .maybeSingle(),
       supabase
         .from("admin_settings")
-        .select("id, is_oprec, label, updated_at")
+        .select("id, is_oprec, label, announcement_at, updated_at")
         .eq("id", 1)
         .maybeSingle(),
       supabase
@@ -63,9 +64,10 @@ export default async function PengaturanOprecRoute() {
     );
   }
 
-  // Tentukan apakah user memiliki hak akses CRUD pertanyaan (role admin atau developer)
-  const userRole = (adminRecord.role_oprec || "").toLowerCase().trim();
-  const canManage = userRole === "admin" || userRole === "developer";
+  // Hak akses diambil dari role admin (custom role) atau status superadmin
+  const access = await getAdminAccess(supabase, user.email);
+  const canManage = hasPermission(access, "interview.manage");
+  const canEditSettings = hasPermission(access, "oprec.settings");
 
   return (
     <OprecSettingsPage
@@ -74,11 +76,13 @@ export default async function PengaturanOprecRoute() {
           id: 1,
           is_oprec: false,
           label: "Informasi pendaftaran segera diumumkan",
+          announcement_at: null,
           updated_at: new Date().toISOString(),
         }
       }
       initialQuestions={questions}
       canManage={canManage}
+      canEditSettings={canEditSettings}
       userRole={adminRecord.role_oprec || "admin"}
       divisions={divisions}
     />

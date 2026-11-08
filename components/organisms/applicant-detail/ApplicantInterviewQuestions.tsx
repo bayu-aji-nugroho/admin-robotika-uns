@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { MessageSquare, Loader2, Check, Save, ChevronDown, ChevronRight } from "lucide-react";
+import { MessageSquare, Loader2, Check, Save, ChevronDown, ChevronRight, FileDown } from "lucide-react";
+import { downloadFromApi } from "@/utils/downloadFile";
 import { ApplicantDetailData } from "./types";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
+import { groupInterviewQuestions } from "@/utils/interviewQuestionGroups";
 
 interface ApplicantInterviewQuestionsProps {
   applicant: ApplicantDetailData;
@@ -113,47 +115,25 @@ export function ApplicantInterviewQuestions({
     }));
   };
 
-  // Helper pencocokan divisi
-  const isQuestionMatchingDivision = (
-    questionDivision: string,
-    targetDivId?: string | null,
-    targetDivName?: string | null
-  ) => {
-    if (!targetDivId && !targetDivName) return false;
-    const qDiv = questionDivision.toLowerCase().trim();
-    const divId = (targetDivId || "").toLowerCase().trim();
-    const divName = (targetDivName || "").toLowerCase().trim();
+  const [isDownloading, setIsDownloading] = useState(false);
 
-    return qDiv === divId || qDiv === divName || divId.includes(qDiv) || divName.includes(qDiv);
+  // PDF dibuat dari data tersimpan, jadi simpan catatan dulu sebelum mengunduh
+  const handleDownloadReport = async () => {
+    setIsDownloading(true);
+    const error = await downloadFromApi(
+      `/api/export/interview-report?applicant=${encodeURIComponent(applicant.id)}`,
+      "Lembar_Wawancara.pdf"
+    );
+    setIsDownloading(false);
+    if (error) window.alert(error);
   };
 
-  // 1. General: berlaku untuk semua pendaftar
-  const generalQuestions = interviewQuestions.filter(
-    (q) => (q.division || "").toLowerCase() === "general"
-  );
-
-  // 2. Divisi Pilihan 1
-  const primaryDivisionQuestions = interviewQuestions.filter(
-    (q) =>
-      (q.division || "").toLowerCase() !== "general" &&
-      isQuestionMatchingDivision(
-        q.division,
-        applicant.primary_division_id,
-        applicant.primary_division_name
-      )
-  );
-
-  // 3. Divisi Pilihan 2 (hanya jika berbeda dengan Pilihan 1)
-  const secondaryDivisionQuestions = interviewQuestions.filter(
-    (q) =>
-      (q.division || "").toLowerCase() !== "general" &&
-      !primaryDivisionQuestions.some((pq) => pq.id === q.id) &&
-      isQuestionMatchingDivision(
-        q.division,
-        applicant.secondary_division_id,
-        applicant.secondary_division_name
-      )
-  );
+  // General, Divisi Pilihan 1, dan Divisi Pilihan 2 (sama dengan isi lembar wawancara PDF)
+  const {
+    general: generalQuestions,
+    primary: primaryDivisionQuestions,
+    secondary: secondaryDivisionQuestions,
+  } = groupInterviewQuestions(interviewQuestions, applicant);
 
   const totalQuestionsCount =
     generalQuestions.length +
@@ -173,7 +153,21 @@ export function ApplicantInterviewQuestions({
           </span>
         </div>
 
-        <div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadReport}
+            disabled={isDownloading}
+            title="Unduh lembar hasil wawancara (PDF) dari catatan yang sudah tersimpan"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 disabled:opacity-60 transition-colors cursor-pointer"
+          >
+            {isDownloading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <FileDown className="w-3.5 h-3.5" />
+            )}
+            <span>Unduh PDF</span>
+          </button>
           <button
             type="button"
             onClick={onSaveInterviewAnswers}

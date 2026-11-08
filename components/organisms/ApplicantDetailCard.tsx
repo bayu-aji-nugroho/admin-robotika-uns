@@ -29,6 +29,8 @@ export function ApplicantDetailCard({
   applicant,
   divisions = [],
   interviewQuestions = [],
+  canAssess = true,
+  canDelete = true,
 }: ApplicantDetailCardProps) {
   const router = useRouter();
 
@@ -291,6 +293,8 @@ export function ApplicantDetailCard({
           setIsDeleteDialogOpen(true);
         }}
         isDeleting={isDeleting}
+        canAssess={canAssess}
+        canDelete={canDelete}
       />
 
       {/* Modal Konfirmasi Hapus Peserta Permanen */}

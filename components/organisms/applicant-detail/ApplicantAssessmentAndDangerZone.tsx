@@ -25,10 +25,11 @@ interface ApplicantAssessmentAndDangerZoneProps {
   saveSuccess?: boolean;
   onOpenDeleteModal: () => void;
   isDeleting: boolean;
+  canAssess?: boolean;
+  canDelete?: boolean;
 }
 
 export function ApplicantAssessmentAndDangerZone({
-  applicant,
   divisions,
   decisionStatus,
   onUpdateDecision,
@@ -37,7 +38,10 @@ export function ApplicantAssessmentAndDangerZone({
   isSavingDecision,
   onOpenDeleteModal,
   isDeleting,
+  canAssess = true,
+  canDelete = true,
 }: ApplicantAssessmentAndDangerZoneProps) {
+  const decisionLocked = isSavingDecision || !canAssess;
   const technicalDivisions = divisions.filter((d) => d.category === "teknis");
   const nonTechnicalDivisions = divisions.filter((d) => d.category !== "teknis");
 
@@ -53,12 +57,18 @@ export function ApplicantAssessmentAndDangerZone({
       </div>
 
       <div className="space-y-4">
+        {!canAssess && (
+          <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+            Mode lihat: role Anda tidak memiliki akses menilai pendaftar.
+          </p>
+        )}
+
         {/* Opsi Kartu Keputusan */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {/* Opsi 1: ACC / Terima */}
           <button
             type="button"
-            disabled={isSavingDecision}
+            disabled={decisionLocked}
             onClick={() => onUpdateDecision("accepted")}
             className={`px-4 py-3 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between disabled:opacity-60 ${
               decisionStatus === "accepted"
@@ -81,7 +91,7 @@ export function ApplicantAssessmentAndDangerZone({
           {/* Opsi 2: Tolak */}
           <button
             type="button"
-            disabled={isSavingDecision}
+            disabled={decisionLocked}
             onClick={() => onUpdateDecision("rejected")}
             className={`px-4 py-3 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between disabled:opacity-60 ${
               decisionStatus === "rejected"
@@ -104,7 +114,7 @@ export function ApplicantAssessmentAndDangerZone({
           {/* Opsi 3: Pertimbangan (Pending) */}
           <button
             type="button"
-            disabled={isSavingDecision}
+            disabled={decisionLocked}
             onClick={() => onUpdateDecision("pending")}
             className={`px-4 py-3 rounded-lg border text-left transition-all cursor-pointer flex items-center justify-between disabled:opacity-60 ${
               decisionStatus === "pending"
@@ -136,7 +146,7 @@ export function ApplicantAssessmentAndDangerZone({
               <select
                 value={acceptedDivisionId}
                 onChange={(e) => onAcceptedDivisionChange(e.target.value)}
-                disabled={isSavingDecision}
+                disabled={decisionLocked}
                 className="text-xs font-semibold px-3 py-2 rounded-lg bg-white dark:bg-zinc-900 border border-emerald-300 dark:border-emerald-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 flex-1 cursor-pointer"
               >
                 <option value="">-- Tetapkan Divisi Penerimaan --</option>
@@ -171,7 +181,8 @@ export function ApplicantAssessmentAndDangerZone({
           </div>
           <button
             type="button"
-            disabled={isDeleting}
+            disabled={isDeleting || !canDelete}
+            title={canDelete ? undefined : "Role Anda tidak memiliki akses hapus pendaftar"}
             onClick={onOpenDeleteModal}
             className="inline-flex items-center justify-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 active:bg-rose-800 disabled:opacity-60 rounded-lg shadow-2xs transition-all cursor-pointer whitespace-nowrap self-start sm:self-center"
           >

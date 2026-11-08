@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, Filter, X, RotateCcw, RefreshCw, ChevronRight } from "lucide-react";
+import { Search, Filter, X, RotateCcw, RefreshCw, ChevronRight, FileDown, FileText } from "lucide-react";
+import { downloadFromApi } from "@/utils/downloadFile";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 
@@ -124,15 +125,31 @@ export function getParticipantStep(item: RegistrationItem): {
 
 interface ApplicantListProps {
   initialRegistrations: RegistrationItem[];
+  /** Pilihan filter ekspor PDF (berdasarkan divisi diterima) */
+  divisions?: { id: string; name: string }[];
 }
 
-export function ApplicantList({ initialRegistrations }: ApplicantListProps) {
+export function ApplicantList({ initialRegistrations, divisions = [] }: ApplicantListProps) {
   const router = useRouter();
   const [registrations, setRegistrations] =
     useState<RegistrationItem[]>(initialRegistrations);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isExporting, setIsExporting] = useState<"list" | "interview" | null>(null);
+  const [exportDivision, setExportDivision] = useState("all");
+
+  // "list" = PDF daftar ringkas, "interview" = lembar hasil wawancara (pertanyaan + jawaban)
+  const handleExport = async (kind: "list" | "interview") => {
+    setIsExporting(kind);
+    const division = encodeURIComponent(exportDivision);
+    const error =
+      kind === "list"
+        ? await downloadFromApi(`/api/export/applicants?division=${division}`, "Calon_Anggota_Robotika_UNS.pdf")
+        : await downloadFromApi(`/api/export/interview-report?division=${division}`, "Lembar_Wawancara.pdf");
+    setIsExporting(null);
+    if (error) window.alert(error);
+  };
 
   // Filter data berdasarkan query pencarian dan status hasil oprec terpilih
   const filteredRegistrations = useMemo(() => {
@@ -276,6 +293,46 @@ export function ApplicantList({ initialRegistrations }: ApplicantListProps) {
                 (hasil: {filteredRegistrations.length})
               </span>
             )}
+          </div>
+
+          {/* Ekspor PDF dengan filter divisi diterima */}
+          <div className="flex items-center rounded-lg border border-zinc-200 dark:border-zinc-700/70 overflow-hidden">
+            <select
+              value={exportDivision}
+              onChange={(e) => setExportDivision(e.target.value)}
+              disabled={isExporting !== null}
+              aria-label="Filter divisi untuk ekspor PDF"
+              title="Filter berdasarkan divisi diterima"
+              className="max-w-[170px] pl-2.5 pr-1 py-1.5 bg-zinc-50 dark:bg-zinc-900 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-hidden cursor-pointer border-r border-zinc-200 dark:border-zinc-700/70"
+            >
+              <option value="all">Semua divisi</option>
+              <option value="unplaced">Belum ditempatkan</option>
+              {divisions.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => handleExport("list")}
+              disabled={isExporting !== null}
+              title="Unduh daftar ringkas calon anggota (PDF)"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-white bg-[#B22234] hover:bg-[#8B0000] transition-colors cursor-pointer disabled:opacity-60 border-r border-white/30"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span>{isExporting === "list" ? "Menyiapkan..." : "Daftar"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleExport("interview")}
+              disabled={isExporting !== null}
+              title="Unduh lembar hasil wawancara: pertanyaan + jawaban, 1 halaman per calon anggota (PDF)"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-white bg-[#B22234] hover:bg-[#8B0000] transition-colors cursor-pointer disabled:opacity-60"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>{isExporting === "interview" ? "Menyiapkan..." : "Lembar Wawancara"}</span>
+            </button>
           </div>
 
           {/* Tombol Refresh */}

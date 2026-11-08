@@ -3,25 +3,39 @@
 import React, { useState } from "react";
 import { ToggleSwitch } from "@/components/atoms/ToggleSwitch";
 import { Button } from "@/components/atoms/Button";
-import { CheckCircle2, AlertCircle, RotateCcw, Save } from "lucide-react";
+import { CheckCircle2, AlertCircle, RotateCcw, Save, CalendarClock, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import {
+  formatJakartaDateTime,
+  fromJakartaInputValue,
+  toJakartaInputValue,
+} from "@/utils/jakartaTime";
 
 interface OprecSettingsCardProps {
   initialIsOprec: boolean;
   initialLabel: string;
+  initialAnnouncementAt?: string | null;
   updatedAt?: string;
+  canEdit?: boolean;
 }
 
 export function OprecSettingsCard({
   initialIsOprec,
   initialLabel,
+  initialAnnouncementAt = null,
   updatedAt,
+  canEdit = true,
 }: OprecSettingsCardProps) {
   const [isOprec, setIsOprec] = useState<boolean>(initialIsOprec);
   const [label, setLabel] = useState<string>(initialLabel);
+  // Nilai input datetime-local dalam WIB, "" = belum ditentukan
+  const [announcement, setAnnouncement] = useState<string>(toJakartaInputValue(initialAnnouncementAt));
 
   const [savedIsOprec, setSavedIsOprec] = useState<boolean>(initialIsOprec);
   const [savedLabel, setSavedLabel] = useState<string>(initialLabel);
+  const [savedAnnouncement, setSavedAnnouncement] = useState<string>(
+    toJakartaInputValue(initialAnnouncementAt)
+  );
   const [lastUpdated, setLastUpdated] = useState<string | undefined>(updatedAt);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -30,17 +44,19 @@ export function OprecSettingsCard({
     text: string;
   } | null>(null);
 
-  const hasChanges = isOprec !== savedIsOprec || label !== savedLabel;
+  const hasChanges =
+    isOprec !== savedIsOprec || label !== savedLabel || announcement !== savedAnnouncement;
 
   const handleReset = () => {
     setIsOprec(savedIsOprec);
     setLabel(savedLabel);
+    setAnnouncement(savedAnnouncement);
     setStatusMessage(null);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hasChanges || isSaving) return;
+    if (!canEdit || !hasChanges || isSaving) return;
 
     try {
       setIsSaving(true);
@@ -56,6 +72,13 @@ export function OprecSettingsCard({
         return;
       }
 
+      const announcementAt = announcement ? fromJakartaInputValue(announcement) : null;
+      if (announcement && !announcementAt) {
+        setStatusMessage({ type: "error", text: "Format tanggal pengumuman tidak valid." });
+        setIsSaving(false);
+        return;
+      }
+
       const supabase = createClient();
       const now = new Date().toISOString();
 
@@ -64,16 +87,18 @@ export function OprecSettingsCard({
         .update({
           is_oprec: isOprec,
           label: trimmedLabel,
+          announcement_at: announcementAt,
           updated_at: now,
         })
         .eq("id", 1);
 
       if (error) {
-        throw error;
+        throw new Error(error.message);
       }
 
       setSavedIsOprec(isOprec);
       setSavedLabel(trimmedLabel);
+      setSavedAnnouncement(announcement);
       setLabel(trimmedLabel);
       setLastUpdated(now);
       setStatusMessage({
@@ -144,6 +169,7 @@ export function OprecSettingsCard({
             onChange={(checked) => setIsOprec(checked)}
             ariaLabel="Status Penerimaan OPREC"
             size="md"
+            disabled={!canEdit}
           />
         </div>
 
@@ -169,14 +195,57 @@ export function OprecSettingsCard({
             placeholder="Tulis pesan pengumuman..."
             required
             maxLength={120}
+            disabled={!canEdit}
             className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-[#E4E4E7] dark:border-zinc-700/80 rounded-lg text-xs sm:text-sm text-[#18181b] dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors"
           />
         </div>
 
-        {/* Row 3: Action Buttons */}
+        {/* Row 3: Tanggal Pengumuman Hasil Seleksi */}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="oprec-announcement-input"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#18181b] dark:text-zinc-200"
+          >
+            <CalendarClock className="w-4 h-4 text-[#B22234] dark:text-rose-400" />
+            Tanggal Pengumuman Hasil Seleksi
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="oprec-announcement-input"
+              type="datetime-local"
+              value={announcement}
+              onChange={(e) => setAnnouncement(e.target.value)}
+              disabled={!canEdit}
+              className="flex-1 px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-[#E4E4E7] dark:border-zinc-700/80 rounded-lg text-xs sm:text-sm text-[#18181b] dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors"
+            />
+            {announcement && canEdit && (
+              <button
+                type="button"
+                onClick={() => setAnnouncement("")}
+                title="Kosongkan tanggal pengumuman"
+                className="p-2 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            {announcement && fromJakartaInputValue(announcement)
+              ? `Calon anggota baru bisa melihat hasil seleksi mulai ${formatJakartaDateTime(
+                  fromJakartaInputValue(announcement)!
+                )}. Sebelum itu tampil info tanggal pengumuman.`
+              : "Belum ditentukan: hasil seleksi disembunyikan dari calon anggota sampai tanggal diisi."}
+          </p>
+        </div>
+
+        {/* Row 4: Action Buttons */}
         <div className="pt-4 border-t border-[#E4E4E7] dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs">
-            {hasChanges ? (
+            {!canEdit ? (
+              <span className="text-amber-700 dark:text-amber-400 font-medium">
+                Mode lihat: role Anda tidak memiliki akses Pengaturan OPREC
+              </span>
+            ) : hasChanges ? (
               <span className="text-amber-700 dark:text-amber-400 font-medium">
                 Perubahan belum disimpan
               </span>
@@ -212,7 +281,7 @@ export function OprecSettingsCard({
               variant="primary"
               size="md"
               isLoading={isSaving}
-              disabled={!hasChanges || isSaving}
+              disabled={!canEdit || !hasChanges || isSaving}
               className="flex-1 sm:flex-none"
               icon={<Save className="w-4 h-4" />}
             >

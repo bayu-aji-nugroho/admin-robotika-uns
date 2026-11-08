@@ -31,25 +31,77 @@ interface InterviewQuestionsEditorProps {
   availableDivisions?: DivisionOption[];
 }
 
-const STANDARD_DIVISIONS: { id: string; name: string }[] = [
-  { id: "pemrograman", name: "Pemrograman" },
-  { id: "elektronika", name: "Elektronika" },
-  { id: "mekanika", name: "Mekanika" },
+type DivisionGroupKey = "werkudara" | "cakrawala" | "non-teknis";
+
+// Subdivisi teknis tiap tim. ID pertanyaan = "<tim>-<subdivisi>",
+// sama dengan ID divisi pendaftar (mis. "werkudara-elektronika").
+const TECHNICAL_SUBDIVISIONS: { key: string; name: string }[] = [
+  { key: "pemrograman", name: "Pemrograman" },
+  { key: "elektronika", name: "Elektronika" },
+  { key: "mekanika", name: "Mekanika" },
+];
+
+const DIVISION_GROUPS: { key: DivisionGroupKey; name: string }[] = [
+  { key: "werkudara", name: "Tim Werkudara" },
+  { key: "cakrawala", name: "Tim Cakrawala" },
+  { key: "non-teknis", name: "Non-Teknis" },
+];
+
+const FALLBACK_NON_TECHNICAL_DIVISIONS: DivisionOption[] = [
   { id: "administrasi", name: "Administrasi" },
-  { id: "bendahara", name: "Bendahara" },
-  { id: "media-branding", name: "Media Branding" },
-  { id: "humas", name: "Humas" },
+  { id: "bendahara", name: "Keuangan" },
+  { id: "humas", name: "Hubungan Eksternal" },
+  { id: "media-branding", name: "Media Visual" },
   { id: "pengembangan-organisasi", name: "Pengembangan Organisasi" },
 ];
+
+function getDivisionGroup(divisionId: string): DivisionGroupKey {
+  if (divisionId.startsWith("werkudara-")) return "werkudara";
+  if (divisionId.startsWith("cakrawala-")) return "cakrawala";
+  return "non-teknis";
+}
 
 export function InterviewQuestionsEditor({
   initialQuestions = [],
   canManage = false,
   userRole = "admin",
+  availableDivisions = [],
 }: InterviewQuestionsEditorProps) {
   const [questions, setQuestions] = useState<InterviewQuestionItem[]>(initialQuestions);
   const [activeTab, setActiveTab] = useState<"general" | "division">("general");
-  const [selectedDivision, setSelectedDivision] = useState<string>("pemrograman");
+  const [selectedDivision, setSelectedDivision] = useState<string>("werkudara-pemrograman");
+
+  const nonTechnicalDivisions = (() => {
+    const fromDb = availableDivisions.filter((d) => d.category && d.category !== "teknis");
+    return fromDb.length > 0 ? fromDb : FALLBACK_NON_TECHNICAL_DIVISIONS;
+  })();
+
+  const selectedGroup = getDivisionGroup(selectedDivision);
+  const subdivisionOptions: DivisionOption[] =
+    selectedGroup === "non-teknis"
+      ? nonTechnicalDivisions
+      : TECHNICAL_SUBDIVISIONS.map((s) => ({ id: `${selectedGroup}-${s.key}`, name: s.name }));
+
+  // Pertanyaan lama yang disimpan tanpa prefix tim (mis. "elektronika")
+  // tetap berlaku untuk kedua tim; tampilkan juga di tab subdivisi terkait.
+  const sharedSubdivisionKey =
+    selectedGroup === "non-teknis" ? null : selectedDivision.replace(`${selectedGroup}-`, "");
+
+  const selectedDivisionLabel = (() => {
+    const sub = subdivisionOptions.find((d) => d.id === selectedDivision)?.name || selectedDivision;
+    const group = DIVISION_GROUPS.find((g) => g.key === selectedGroup);
+    return selectedGroup === "non-teknis" ? sub : `${group?.name} - ${sub}`;
+  })();
+
+  const handleSelectGroup = (group: DivisionGroupKey) => {
+    const firstOption =
+      group === "non-teknis"
+        ? nonTechnicalDivisions[0]?.id || "administrasi"
+        : `${group}-${TECHNICAL_SUBDIVISIONS[0].key}`;
+    setSelectedDivision(firstOption);
+    setEditingId(null);
+    setDeletingId(null);
+  };
 
   // Form state
   const [newQuestionText, setNewQuestionText] = useState("");
@@ -72,7 +124,11 @@ export function InterviewQuestionsEditor({
   };
 
   const generalQuestions = questions.filter((q) => q.division === "general");
-  const divisionQuestions = questions.filter((q) => q.division === selectedDivision);
+  const divisionQuestions = questions.filter(
+    (q) =>
+      q.division === selectedDivision ||
+      (sharedSubdivisionKey !== null && q.division === sharedSubdivisionKey)
+  );
 
   // Handler: Tambah Pertanyaan
   const handleAddQuestion = async (e: React.FormEvent) => {
@@ -376,9 +432,30 @@ export function InterviewQuestionsEditor({
       {/* TAB PER DIVISI */}
       {activeTab === "division" && (
         <div className="space-y-4">
-          {/* Pills Pilihan Divisi */}
+          {/* Pilihan Tim / Kelompok Divisi */}
+          <div className="inline-flex p-1 rounded-lg bg-zinc-100 dark:bg-zinc-800/70 gap-1 flex-wrap">
+            {DIVISION_GROUPS.map((group) => {
+              const isSelected = selectedGroup === group.key;
+              return (
+                <button
+                  key={group.key}
+                  type="button"
+                  onClick={() => handleSelectGroup(group.key)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-white dark:bg-zinc-950 text-[#B22234] dark:text-rose-400 shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  }`}
+                >
+                  {group.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Pills Pilihan Subdivisi */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            {STANDARD_DIVISIONS.map((div) => {
+            {subdivisionOptions.map((div) => {
               const isSelected = selectedDivision === div.id;
               return (
                 <button
@@ -408,9 +485,7 @@ export function InterviewQuestionsEditor({
                 type="text"
                 value={newQuestionText}
                 onChange={(e) => setNewQuestionText(e.target.value)}
-                placeholder={`Tulis pertanyaan untuk divisi ${
-                  STANDARD_DIVISIONS.find((d) => d.id === selectedDivision)?.name || selectedDivision
-                }...`}
+                placeholder={`Tulis pertanyaan untuk ${selectedDivisionLabel}...`}
                 className="flex-1 px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-[#E4E4E7] dark:border-zinc-700/80 rounded-lg text-xs sm:text-sm text-[#18181b] dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors"
                 disabled={isSubmitting}
               />
@@ -432,7 +507,7 @@ export function InterviewQuestionsEditor({
           <div className="space-y-2">
             {divisionQuestions.length === 0 ? (
               <div className="py-6 text-center border border-dashed border-zinc-200 dark:border-zinc-800 rounded-lg text-xs text-zinc-400">
-                Belum ada pertanyaan untuk divisi ini.
+                Belum ada pertanyaan untuk {selectedDivisionLabel}.
               </div>
             ) : (
               <div className="divide-y divide-zinc-200 dark:divide-zinc-800/80 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-950">
@@ -441,6 +516,14 @@ export function InterviewQuestionsEditor({
                     key={q.id}
                     className="p-3 sm:p-3.5 flex items-center justify-between gap-3 hover:bg-zinc-50/60 dark:hover:bg-zinc-900/40 transition-colors"
                   >
+                    {editingId !== q.id && q.division === sharedSubdivisionKey && (
+                      <span
+                        title="Pertanyaan lama tanpa tim; muncul untuk pendaftar Werkudara dan Cakrawala"
+                        className="shrink-0 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300"
+                      >
+                        Kedua tim
+                      </span>
+                    )}
                     {editingId === q.id ? (
                       <div className="flex-1 flex items-center gap-2">
                         <input

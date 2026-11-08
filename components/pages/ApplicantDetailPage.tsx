@@ -12,12 +12,16 @@ interface ApplicantDetailPageProps {
   applicant: ApplicantDetailData;
   divisions?: DivisionItem[];
   interviewQuestions?: InterviewQuestionItem[];
+  canAssess?: boolean;
+  canDelete?: boolean;
 }
 
 export function ApplicantDetailPage({
   applicant,
   divisions = [],
   interviewQuestions = [],
+  canAssess = false,
+  canDelete = false,
 }: ApplicantDetailPageProps) {
   return (
     <div className="flex-1 bg-[#F9F9F8] dark:bg-[#09090b] min-h-screen py-6 px-4 sm:px-8 transition-colors">
@@ -27,6 +31,8 @@ export function ApplicantDetailPage({
           applicant={applicant}
           divisions={divisions}
           interviewQuestions={interviewQuestions}
+          canAssess={canAssess}
+          canDelete={canDelete}
         />
       </div>
     </div>

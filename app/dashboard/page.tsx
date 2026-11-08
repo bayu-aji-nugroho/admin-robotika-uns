@@ -24,7 +24,7 @@ export default async function DashboardRoute() {
   }
 
   // Jalankan verifikasi whitelist dan pengambilan data pendaftar secara paralel
-  const [adminRecordResult, registrationsResult] = await Promise.all([
+  const [adminRecordResult, registrationsResult, divisionsResult] = await Promise.all([
     supabase
       .from("admin_whitelist")
       .select("id, is_active")
@@ -37,6 +37,12 @@ export default async function DashboardRoute() {
         "id, full_name, nim, primary_division_name, status, assessment_status, current_step, registration_code, created_at, submitted_at"
       )
       .order("created_at", { ascending: true }),
+    supabase
+      .from("divisions")
+      .select("id, name, category")
+      .eq("is_active", true)
+      .order("category", { ascending: false })
+      .order("name", { ascending: true }),
   ]);
 
   const adminRecord = adminRecordResult.data;
@@ -60,5 +66,10 @@ export default async function DashboardRoute() {
     redirect(`/?error=unauthorized_email&email=${encodeURIComponent(user.email)}`);
   }
 
-  return <DashboardPage initialRegistrations={registrations || []} />;
+  return (
+    <DashboardPage
+      initialRegistrations={registrations || []}
+      divisions={divisionsResult.data || []}
+    />
+  );
 }

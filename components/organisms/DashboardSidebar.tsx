@@ -4,10 +4,10 @@ import React, { useEffect, useState } from "react";
 import { SidebarHeader } from "@/components/molecules/SidebarHeader";
 import { NavSection } from "@/components/molecules/NavSection";
 import { NavItem } from "@/components/atoms/NavItem";
-import { Sliders, Users, BarChart3 } from "lucide-react";
+import { Sliders, Users, BarChart3, ShieldCheck, CalendarClock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { ThemeToggle } from "@/components/atoms/ThemeToggle";
+import { useLocalStorageValue } from "@/utils/useLocalStorageValue";
 
 interface UserProfile {
   name: string;
@@ -15,6 +15,7 @@ interface UserProfile {
   oprecRole: string;
   divisionRole: string;
   avatarUrl?: string;
+  isSuperadmin?: boolean;
 }
 
 interface DashboardSidebarProps {
@@ -42,21 +43,15 @@ export function DashboardSidebar({
     }
   );
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState<number>(270);
   const [isResizing, setIsResizing] = useState<boolean>(false);
 
-  // Muat lebar kustom sidebar dari localStorage jika ada
-  useEffect(() => {
-    try {
-      const savedWidth = localStorage.getItem("sidebar_custom_width");
-      if (savedWidth) {
-        const parsed = parseInt(savedWidth, 10);
-        if (!isNaN(parsed) && parsed >= 200 && parsed <= 450) {
-          setSidebarWidth(parsed);
-        }
-      }
-    } catch (_) { }
-  }, []);
+  // Lebar kustom sidebar tersimpan di localStorage; selama drag pakai dragWidth
+  const [savedWidthRaw, setSavedWidth] = useLocalStorageValue("sidebar_custom_width");
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const savedWidth = parseInt(savedWidthRaw || "", 10);
+  const persistedWidth =
+    !isNaN(savedWidth) && savedWidth >= 200 && savedWidth <= 450 ? savedWidth : 270;
+  const sidebarWidth = dragWidth ?? persistedWidth;
 
   // Event listener untuk resize dengan kursor mouse
   useEffect(() => {
@@ -73,7 +68,7 @@ export function DashboardSidebar({
           onToggleCollapse();
         }
         const clampedWidth = Math.min(Math.max(newWidth, 200), 450);
-        setSidebarWidth(clampedWidth);
+        setDragWidth(clampedWidth);
       }
     };
 
@@ -81,9 +76,8 @@ export function DashboardSidebar({
       setIsResizing(false);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
-      try {
-        localStorage.setItem("sidebar_custom_width", String(sidebarWidth));
-      } catch (_) { }
+      setSavedWidth(String(sidebarWidth));
+      setDragWidth(null);
     };
 
     document.body.style.cursor = "col-resize";
@@ -97,7 +91,7 @@ export function DashboardSidebar({
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [isResizing, isCollapsed, onToggleCollapse, sidebarWidth]);
+  }, [isResizing, isCollapsed, onToggleCollapse, sidebarWidth, setSavedWidth]);
 
   useEffect(() => {
     async function loadUser() {
@@ -110,7 +104,7 @@ export function DashboardSidebar({
         if (user && user.email) {
           const { data: whitelistData } = await supabase
             .from("admin_whitelist")
-            .select("full_name, role_oprec, role_division")
+            .select("full_name, role_oprec, role_division, is_superadmin")
             .eq("email", user.email.toLowerCase())
             .maybeSingle();
 
@@ -121,10 +115,11 @@ export function DashboardSidebar({
               user.user_metadata?.name ||
               user.email.split("@")[0],
             email: user.email,
-            oprecRole: whitelistData?.role_oprec || "developer",
-            divisionRole: whitelistData?.role_division || "pemrograman",
+            oprecRole: whitelistData?.role_oprec || "-",
+            divisionRole: whitelistData?.role_division || "-",
             avatarUrl:
               user.user_metadata?.avatar_url || user.user_metadata?.picture,
+            isSuperadmin: Boolean(whitelistData?.is_superadmin),
           });
         }
       } catch {
@@ -197,7 +192,16 @@ export function DashboardSidebar({
             isCollapsed={isCollapsed}
           />
 
-          {/* 3. Statistik */}
+          {/* 3. Jadwal Wawancara */}
+          <NavItem
+            label="Jadwal Wawancara"
+            icon={CalendarClock}
+            href="/dashboard/jadwal"
+            isActive={currentPath === "/dashboard/jadwal"}
+            isCollapsed={isCollapsed}
+          />
+
+          {/* 4. Statistik */}
           <NavItem
             label="Statistik"
             icon={BarChart3}
@@ -206,6 +210,19 @@ export function DashboardSidebar({
             isCollapsed={isCollapsed}
           />
         </NavSection>
+
+        {/* Section # akses (Hanya superadmin: ketua umum, wakil ketua, developer) */}
+        {profile.isSuperadmin && (
+          <NavSection title="akses" isCollapsed={isCollapsed}>
+            <NavItem
+              label="Role"
+              icon={ShieldCheck}
+              href="/dashboard/role"
+              isActive={currentPath === "/dashboard/role"}
+              isCollapsed={isCollapsed}
+            />
+          </NavSection>
+        )}
       </div>
 
       {/* Resizable Drag Handle pada sisi kanan border (Desktop only) */}

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getAdminAccess, hasPermission } from "@/utils/adminAccess";
 
 export interface InterviewQuestionItem {
   id: string;
@@ -21,8 +22,8 @@ export interface ActionResult<T = unknown> {
 }
 
 /**
- * Memverifikasi apakah pengguna saat ini terautentikasi dan memiliki role_oprec
- * yang diizinkan untuk mengelola (CRUD) pertanyaan interview (admin atau developer).
+ * Memverifikasi apakah pengguna saat ini terautentikasi dan role-nya memiliki
+ * hak akses "interview.manage" (atau superadmin).
  */
 async function verifyAdminOrDeveloperRole() {
   const supabase = await createClient();
@@ -41,15 +42,9 @@ async function verifyAdminOrDeveloperRole() {
     };
   }
 
-  const userEmail = user.email.toLowerCase().trim();
-  const { data: whitelistRecord, error: whitelistError } = await supabase
-    .from("admin_whitelist")
-    .select("id, is_active, role_oprec, full_name")
-    .eq("email", userEmail)
-    .eq("is_active", true)
-    .maybeSingle();
+  const access = await getAdminAccess(supabase, user.email);
 
-  if (whitelistError || !whitelistRecord) {
+  if (!access) {
     return {
       authorized: false,
       error: "Akses ditolak: Akun Anda tidak terdaftar sebagai admin aktif.",
@@ -58,12 +53,11 @@ async function verifyAdminOrDeveloperRole() {
     };
   }
 
-  const role = (whitelistRecord.role_oprec || "").toLowerCase().trim();
-  if (role !== "admin" && role !== "developer") {
+  if (!hasPermission(access, "interview.manage")) {
     return {
       authorized: false,
       error:
-        "Akses ditolak: Hanya role Admin OPREC dan Developer yang memiliki hak mengelola pertanyaan wawancara.",
+        "Akses ditolak: Role Anda tidak memiliki hak mengelola pertanyaan wawancara.",
       user,
       supabase,
     };

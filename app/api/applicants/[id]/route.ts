@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getAdminAccess, hasPermission } from "@/utils/adminAccess";
 
 export async function DELETE(
   request: Request,
@@ -33,18 +34,19 @@ export async function DELETE(
       );
     }
 
-    // 2. Verifikasi Hak Akses Admin Whitelist
-    const userEmail = user.email.toLowerCase().trim();
-    const { data: adminRecord } = await supabase
-      .from("admin_whitelist")
-      .select("id, is_active")
-      .eq("email", userEmail)
-      .eq("is_active", true)
-      .maybeSingle();
+    // 2. Verifikasi Hak Akses Admin (role harus punya akses hapus pendaftar)
+    const access = await getAdminAccess(supabase, user.email);
 
-    if (!adminRecord) {
+    if (!access) {
       return NextResponse.json(
         { error: "Akses ditolak: Akun Anda tidak terdaftar sebagai admin aktif." },
+        { status: 403 }
+      );
+    }
+
+    if (!hasPermission(access, "applicants.delete")) {
+      return NextResponse.json(
+        { error: "Akses ditolak: Role Anda tidak memiliki hak menghapus pendaftar." },
         { status: 403 }
       );
     }
@@ -229,10 +231,15 @@ export async function DELETE(
       message:
         "Data peserta, akun login, tabel pendaftaran, dan berkas CV berhasil dihapus secara permanen.",
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("Terjadi error internal saat menghapus pendaftar:", err);
     return NextResponse.json(
-      { error: err?.message || "Terjadi kesalahan internal pada server." },
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "Terjadi kesalahan internal pada server.",
+      },
       { status: 500 }
     );
   }

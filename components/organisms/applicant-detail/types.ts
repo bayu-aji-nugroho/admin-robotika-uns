@@ -51,6 +51,8 @@ export interface ApplicantDetailCardProps {
   applicant: ApplicantDetailData;
   divisions?: DivisionItem[];
   interviewQuestions?: InterviewQuestionItem[];
+  canAssess?: boolean;
+  canDelete?: boolean;
 }
 
 export type DecisionStatus = "pending" | "accepted" | "rejected";

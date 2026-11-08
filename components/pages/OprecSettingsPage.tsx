@@ -13,10 +13,12 @@ interface OprecSettingsPageProps {
     id: number;
     is_oprec: boolean;
     label: string;
+    announcement_at?: string | null;
     updated_at?: string;
   };
   initialQuestions?: InterviewQuestionItem[];
   canManage?: boolean;
+  canEditSettings?: boolean;
   userRole?: string;
   divisions?: DivisionOption[];
 }
@@ -25,6 +27,7 @@ export function OprecSettingsPage({
   initialSettings,
   initialQuestions = [],
   canManage = false,
+  canEditSettings = false,
   userRole = "admin",
   divisions = [],
 }: OprecSettingsPageProps) {
@@ -35,7 +38,9 @@ export function OprecSettingsPage({
         <OprecSettingsCard
           initialIsOprec={initialSettings.is_oprec}
           initialLabel={initialSettings.label}
+          initialAnnouncementAt={initialSettings.announcement_at ?? null}
           updatedAt={initialSettings.updated_at}
+          canEdit={canEditSettings}
         />
 
         {/* Interview Questions Editor: General & Per Divisi */}
