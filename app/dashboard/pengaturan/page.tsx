@@ -36,7 +36,7 @@ export default async function PengaturanOprecRoute() {
         .maybeSingle(),
       supabase
         .from("admin_settings")
-        .select("id, is_oprec, label, announcement_at, updated_at")
+        .select("id, is_oprec, label, announcement_at, oprec_open_at, oprec_close_at, updated_at")
         .eq("id", 1)
         .maybeSingle(),
       supabase
@@ -77,6 +77,8 @@ export default async function PengaturanOprecRoute() {
           is_oprec: false,
           label: "Informasi pendaftaran segera diumumkan",
           announcement_at: null,
+          oprec_open_at: null,
+          oprec_close_at: null,
           updated_at: new Date().toISOString(),
         }
       }

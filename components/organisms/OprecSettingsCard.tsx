@@ -15,6 +15,8 @@ interface OprecSettingsCardProps {
   initialIsOprec: boolean;
   initialLabel: string;
   initialAnnouncementAt?: string | null;
+  initialOpenAt?: string | null;
+  initialCloseAt?: string | null;
   updatedAt?: string;
   canEdit?: boolean;
 }
@@ -23,6 +25,8 @@ export function OprecSettingsCard({
   initialIsOprec,
   initialLabel,
   initialAnnouncementAt = null,
+  initialOpenAt = null,
+  initialCloseAt = null,
   updatedAt,
   canEdit = true,
 }: OprecSettingsCardProps) {
@@ -30,12 +34,19 @@ export function OprecSettingsCard({
   const [label, setLabel] = useState<string>(initialLabel);
   // Nilai input datetime-local dalam WIB, "" = belum ditentukan
   const [announcement, setAnnouncement] = useState<string>(toJakartaInputValue(initialAnnouncementAt));
+  const [openAt, setOpenAt] = useState<string>(toJakartaInputValue(initialOpenAt));
+  const [closeAt, setCloseAt] = useState<string>(toJakartaInputValue(initialCloseAt));
 
   const [savedIsOprec, setSavedIsOprec] = useState<boolean>(initialIsOprec);
   const [savedLabel, setSavedLabel] = useState<string>(initialLabel);
   const [savedAnnouncement, setSavedAnnouncement] = useState<string>(
     toJakartaInputValue(initialAnnouncementAt)
   );
+  const [savedOpenAt, setSavedOpenAt] = useState<string>(toJakartaInputValue(initialOpenAt));
+  const [savedCloseAt, setSavedCloseAt] = useState<string>(toJakartaInputValue(initialCloseAt));
+
+  // Bila salah satu tanggal diisi, status buka/tutup diatur otomatis oleh database
+  const isScheduled = Boolean(openAt || closeAt);
   const [lastUpdated, setLastUpdated] = useState<string | undefined>(updatedAt);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -45,12 +56,18 @@ export function OprecSettingsCard({
   } | null>(null);
 
   const hasChanges =
-    isOprec !== savedIsOprec || label !== savedLabel || announcement !== savedAnnouncement;
+    isOprec !== savedIsOprec ||
+    label !== savedLabel ||
+    announcement !== savedAnnouncement ||
+    openAt !== savedOpenAt ||
+    closeAt !== savedCloseAt;
 
   const handleReset = () => {
     setIsOprec(savedIsOprec);
     setLabel(savedLabel);
     setAnnouncement(savedAnnouncement);
+    setOpenAt(savedOpenAt);
+    setCloseAt(savedCloseAt);
     setStatusMessage(null);
   };
 
@@ -79,26 +96,48 @@ export function OprecSettingsCard({
         return;
       }
 
+      const openAtIso = openAt ? fromJakartaInputValue(openAt) : null;
+      const closeAtIso = closeAt ? fromJakartaInputValue(closeAt) : null;
+      if ((openAt && !openAtIso) || (closeAt && !closeAtIso)) {
+        setStatusMessage({ type: "error", text: "Format tanggal buka/tutup OPREC tidak valid." });
+        setIsSaving(false);
+        return;
+      }
+      if (openAtIso && closeAtIso && new Date(closeAtIso) <= new Date(openAtIso)) {
+        setStatusMessage({ type: "error", text: "Tanggal penutupan harus setelah tanggal pembukaan." });
+        setIsSaving(false);
+        return;
+      }
+
       const supabase = createClient();
       const now = new Date().toISOString();
 
-      const { error } = await supabase
+      // Dalam mode otomatis, database menghitung ulang is_oprec dari jadwal
+      const { data: saved, error } = await supabase
         .from("admin_settings")
         .update({
           is_oprec: isOprec,
           label: trimmedLabel,
           announcement_at: announcementAt,
+          oprec_open_at: openAtIso,
+          oprec_close_at: closeAtIso,
           updated_at: now,
         })
-        .eq("id", 1);
+        .eq("id", 1)
+        .select("is_oprec")
+        .single();
 
       if (error) {
         throw new Error(error.message);
       }
 
-      setSavedIsOprec(isOprec);
+      const effectiveIsOprec = Boolean(saved?.is_oprec ?? isOprec);
+      setIsOprec(effectiveIsOprec);
+      setSavedIsOprec(effectiveIsOprec);
       setSavedLabel(trimmedLabel);
       setSavedAnnouncement(announcement);
+      setSavedOpenAt(openAt);
+      setSavedCloseAt(closeAt);
       setLabel(trimmedLabel);
       setLastUpdated(now);
       setStatusMessage({
@@ -158,9 +197,16 @@ export function OprecSettingsCard({
                   : "bg-zinc-400 dark:bg-zinc-500"
               }`}
             />
-            <span className="text-sm font-semibold text-[#18181b] dark:text-zinc-100">
-              {isOprec ? "Pendaftaran Dibuka" : "Pendaftaran Ditutup"}
-            </span>
+            <div>
+              <span className="block text-sm font-semibold text-[#18181b] dark:text-zinc-100">
+                {isOprec ? "Pendaftaran Dibuka" : "Pendaftaran Ditutup"}
+              </span>
+              <span className="block text-[11px] text-zinc-500 dark:text-zinc-400">
+                {isScheduled
+                  ? "Mode otomatis: mengikuti jadwal buka/tutup di bawah"
+                  : "Mode manual: diatur lewat tombol ini"}
+              </span>
+            </div>
           </div>
 
           <ToggleSwitch
@@ -169,8 +215,61 @@ export function OprecSettingsCard({
             onChange={(checked) => setIsOprec(checked)}
             ariaLabel="Status Penerimaan OPREC"
             size="md"
-            disabled={!canEdit}
+            disabled={!canEdit || isScheduled}
           />
+        </div>
+
+        {/* Row 1b: Jadwal Buka & Tutup OPREC Otomatis */}
+        <div className="space-y-2">
+          <p className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#18181b] dark:text-zinc-200">
+            <CalendarClock className="w-4 h-4 text-[#B22234] dark:text-rose-400" />
+            Jadwal OPREC Otomatis
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {[
+              { id: "oprec-open-input", label: "Tanggal pembukaan", value: openAt, set: setOpenAt },
+              { id: "oprec-close-input", label: "Tanggal penutupan", value: closeAt, set: setCloseAt },
+            ].map((field) => (
+              <div key={field.id} className="space-y-1">
+                <label htmlFor={field.id} className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
+                  {field.label}
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    id={field.id}
+                    type="datetime-local"
+                    value={field.value}
+                    onChange={(e) => field.set(e.target.value)}
+                    disabled={!canEdit}
+                    className="flex-1 min-w-0 px-3 py-2.5 bg-white dark:bg-zinc-950 border border-[#E4E4E7] dark:border-zinc-700/80 rounded-lg text-xs sm:text-sm text-[#18181b] dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors"
+                  />
+                  {field.value && canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => field.set("")}
+                      title={`Kosongkan ${field.label.toLowerCase()}`}
+                      className="p-2 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            {isScheduled
+              ? [
+                  openAt && fromJakartaInputValue(openAt)
+                    ? `Dibuka otomatis ${formatJakartaDateTime(fromJakartaInputValue(openAt)!)}`
+                    : "Langsung dibuka",
+                  closeAt && fromJakartaInputValue(closeAt)
+                    ? `ditutup otomatis ${formatJakartaDateTime(fromJakartaInputValue(closeAt)!)}`
+                    : "tanpa batas penutupan",
+                ].join(", ") +
+                ". Website pendaftaran mengikuti jadwal ini (diperbarui tiap menit)."
+              : "Kosongkan keduanya untuk mengatur buka/tutup secara manual lewat tombol di atas."}
+          </p>
         </div>
 
         {/* Row 2: Input Label */}

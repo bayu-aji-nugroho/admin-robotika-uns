@@ -14,6 +14,8 @@ interface OprecSettingsPageProps {
     is_oprec: boolean;
     label: string;
     announcement_at?: string | null;
+    oprec_open_at?: string | null;
+    oprec_close_at?: string | null;
     updated_at?: string;
   };
   initialQuestions?: InterviewQuestionItem[];
@@ -39,6 +41,8 @@ export function OprecSettingsPage({
           initialIsOprec={initialSettings.is_oprec}
           initialLabel={initialSettings.label}
           initialAnnouncementAt={initialSettings.announcement_at ?? null}
+          initialOpenAt={initialSettings.oprec_open_at ?? null}
+          initialCloseAt={initialSettings.oprec_close_at ?? null}
           updatedAt={initialSettings.updated_at}
           canEdit={canEditSettings}
         />
