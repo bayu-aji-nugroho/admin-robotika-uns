@@ -76,7 +76,8 @@ export function DashboardTemplate({
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto min-h-screen">
+      {/* overflow-x-clip (bukan overflow-auto) agar elemen sticky di halaman ikut menempel saat window di-scroll */}
+      <main className="flex-1 min-w-0 flex flex-col overflow-x-clip min-h-screen">
         {/* Desktop Top Header Bar (Menyatu dalam page flow, tidak tumpang tindih) */}
         <header className="hidden md:flex items-center justify-end px-4 sm:px-8 pt-4 pb-0 shrink-0">
           <div className="max-w-6xl w-full mx-auto flex items-center justify-end">

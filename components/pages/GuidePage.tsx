@@ -1,6 +1,9 @@
 import React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
+  Bell,
+  ListChecks,
   BookOpen,
   CalendarClock,
   Check,
@@ -16,6 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { ADMIN_PERMISSIONS, AdminPermission } from "@/utils/permissions";
+import { GuideToc, type GuideTocItem } from "@/components/organisms/GuideToc";
 
 interface GuidePageProps {
   viewer: {
@@ -41,7 +45,41 @@ interface GuideSection {
   intro: string;
   steps: GuideStep[];
   tips?: string[];
+  /** Penjelasan status/label yang tampil di halaman, dikelompokkan per bagian */
+  statuses?: { group: string; items: { label: string; tone: StatusTone; meaning: string }[] }[];
+  /** Gambar tutorial beranotasi (di folder public/guide) */
+  image?: { src: string; alt: string; width: number; height: number; caption: string };
 }
+
+type StatusTone =
+  | "match"
+  | "mine"
+  | "partner"
+  | "off"
+  | "past"
+  | "booked"
+  | "ok"
+  | "warn"
+  | "neutral"
+  | "done"
+  | "rowMine"
+  | "rowDone";
+
+// Gaya label disamakan dengan tampilan aslinya di halaman Jadwal Wawancara
+const STATUS_TONE: Record<StatusTone, string> = {
+  match: "bg-emerald-600 border-emerald-600 text-white",
+  mine: "bg-[#B22234] border-[#B22234] text-white",
+  partner: "bg-white dark:bg-zinc-950 border-dashed border-emerald-400 dark:border-emerald-700 text-zinc-700 dark:text-zinc-300",
+  off: "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300",
+  past: "bg-zinc-50 dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-400 dark:text-zinc-600",
+  booked: "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300",
+  ok: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300",
+  warn: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300",
+  neutral: "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300",
+  done: "bg-emerald-600 border-emerald-600 text-white",
+  rowMine: "bg-[#FCF2F3] dark:bg-rose-950/30 border-rose-200 dark:border-rose-900 text-rose-800 dark:text-rose-300",
+  rowDone: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-300",
+};
 
 const cardClass =
   "bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 rounded-xl p-5 sm:p-6 shadow-xs";
@@ -183,10 +221,171 @@ const SECTIONS: GuideSection[] = [
         detail: "Klik Buka Lembar Wawancara (tab baru). Isi jawaban tiap pertanyaan, lalu Simpan & Tandai Selesai.",
       },
     ],
+    statuses: [
+      {
+        group: "Status pasangan",
+        items: [
+          { label: "Menunggu", tone: "warn", meaning: "Undangan sudah dikirim, belum diterima oleh admin yang diundang. Kalender belum bisa dipakai bersama." },
+          { label: "Aktif", tone: "ok", meaning: "Pasangan sudah terbentuk. Jam yang sama-sama kosong bisa dipesan calon anggota." },
+        ],
+      },
+      {
+        group: "Status slot di kalender",
+        items: [
+          { label: "Cocok ✓", tone: "match", meaning: "Anda dan pasangan sama-sama bisa. Slot ini TERBUKA dan bisa dipilih calon anggota." },
+          { label: "Bisa · pasangan belum", tone: "mine", meaning: "Hanya Anda yang bisa. Belum bisa dipesan sampai pasangan juga mengisi jam yang sama." },
+          { label: "Bisa", tone: "mine", meaning: "Anda bisa, tetapi belum berpasangan. Tersimpan, tetapi belum bisa dipesan." },
+          { label: "Pasangan bisa", tone: "partner", meaning: "Hanya pasangan yang bisa. Klik slot ini bila Anda juga bisa agar menjadi Cocok." },
+          { label: "Tidak bisa", tone: "off", meaning: "Slot kosong, tidak ada yang mengisi." },
+          { label: "Lewat", tone: "past", meaning: "Waktunya sudah lewat, tidak bisa diubah." },
+          { label: "🔒 Nama calon", tone: "booked", meaning: "Sudah dipesan calon anggota. Terkunci dan tidak ikut terhapus saat kalender diubah." },
+        ],
+      },
+      {
+        group: "Status kelengkapan pasangan",
+        items: [
+          { label: "Siap: n sesi", tone: "ok", meaning: "Anda & pasangan sudah mengisi WhatsApp dan punya jam cocok. Calon anggota bisa memesan n sesi." },
+          { label: "Belum lengkap", tone: "warn", meaning: "WhatsApp salah satu anggota belum diisi, atau belum ada jam yang cocok." },
+          { label: "Belum berpasangan", tone: "warn", meaning: "Anda belum punya pasangan aktif. Kalender tersimpan tetapi belum bisa dipesan." },
+        ],
+      },
+    ],
+    image: {
+      src: "/guide/tutorial-jadwal-wawancara.png",
+      alt: "Tutorial bergambar halaman Jadwal Wawancara dengan 13 langkah bernomor",
+      width: 2124,
+      height: 1774,
+      caption: "Ikuti nomor pada gambar. Klik gambar untuk membuka ukuran penuh.",
+    },
     tips: [
       "Daftar sesi otomatis hanya menampilkan sesi Anda. Hapus centang “Hanya yang saya wawancarai” untuk melihat semua.",
       "Slot yang sudah dipesan calon anggota terkunci dan tidak ikut terhapus saat Anda mengubah kalender.",
       "Sesi hanya bisa ditandai selesai setelah jam mulainya lewat.",
+    ],
+  },
+  {
+    id: "sesi",
+    title: "Jadwal Calon Anggota (Saat Calon Memilih)",
+    icon: ListChecks,
+    href: "/dashboard/jadwal",
+    requires: "Jadwal wawancara · Kelola semua sesi wawancara",
+    intro:
+      "Begitu calon anggota memilih jam di website, sesinya langsung muncul di daftar Jadwal Calon Anggota (bagian bawah halaman Jadwal Wawancara). Berikut alurnya dari dipilih sampai selesai.",
+    steps: [
+      {
+        title: "Calon anggota memilih jadwal",
+        detail: (
+          <>
+            Sesi muncul di tanggalnya dengan label <strong>Menunggu konfirmasi</strong> dan{" "}
+            <strong>Lokasi belum diisi</strong>. Slot itu di kalender Anda & pasangan berubah menjadi 🔒 nama calon,
+            dan di Ringkasan Gabungan tampil sebagai sudah dipesan. Calon masih bisa mengganti jadwal, sehingga sesi
+            bisa berpindah jam.
+          </>
+        ),
+      },
+      {
+        title: "Calon anggota menekan Accept",
+        detail: (
+          <>
+            Label berubah menjadi <strong>🔒 Dikonfirmasi</strong>. Jam wawancara terkunci permanen dan calon tidak
+            bisa menggantinya lagi.
+          </>
+        ),
+      },
+      {
+        title: "Calon menghubungi via WhatsApp",
+        detail:
+          "Setelah Accept, calon melihat tombol WhatsApp ke Anda & pasangan untuk menyepakati tempat. Pastikan No. WhatsApp sudah diisi di Kelengkapan Pasangan.",
+      },
+      {
+        title: "Catat lokasi",
+        detail:
+          "Ketik lokasi/link di kolom lokasi sesi (atau klik tombol cepat Sekretariat / Online), lalu Simpan. Centang “Terapkan ke semua sesi hari ini” bila tempatnya sama. Label Lokasi belum diisi hilang dan lokasi langsung tampil di website calon.",
+      },
+      {
+        title: "Lakukan wawancara",
+        detail:
+          "Klik Buka Lembar Wawancara (tab baru). Pertanyaan sudah menyesuaikan divisi pilihan calon. Tulis jawaban & catatan khusus lalu Simpan Catatan.",
+      },
+      {
+        title: "Tandai selesai",
+        detail: (
+          <>
+            Centang kotak di kiri sesi, atau klik <strong>Simpan &amp; Tandai Selesai</strong> di lembar wawancara.
+            Label menjadi <strong>Selesai</strong>, baris berwarna hijau, jam selesai tercatat, dan progres “x/y
+            selesai” bertambah.
+          </>
+        ),
+      },
+    ],
+    statuses: [
+      {
+        group: "Label status sesi",
+        items: [
+          { label: "Menunggu konfirmasi", tone: "warn", meaning: "Calon anggota sudah memilih jadwal tetapi belum menekan Accept. Ia masih bisa mengganti jadwalnya." },
+          { label: "🔒 Dikonfirmasi", tone: "ok", meaning: "Calon anggota sudah Accept. Jam terkunci permanen; lokasi masih bisa diubah pewawancara." },
+          { label: "Lokasi belum diisi", tone: "neutral", meaning: "Tempat belum dicatat. Calon anggota diarahkan menghubungi pewawancara via WhatsApp; isi lokasinya setelah disepakati." },
+          { label: "Selesai", tone: "done", meaning: "Wawancara sudah dilakukan dan dicentang pewawancara (bisa dibatalkan bila salah centang)." },
+        ],
+      },
+      {
+        group: "Tanda pada baris sesi",
+        items: [
+          { label: "☐ Kotak pudar", tone: "past", meaning: "Sesi belum dimulai, jadi belum bisa dicentang selesai." },
+          { label: "☐ Kotak kosong", tone: "off", meaning: "Sesi sudah dimulai/lewat dan belum dicentang. Klik untuk menandai selesai." },
+          { label: "✓ Kotak hijau", tone: "match", meaning: "Sudah selesai. Klik lagi untuk membatalkan bila salah centang." },
+          { label: "Baris merah muda", tone: "rowMine", meaning: "Sesi yang Anda wawancarai sendiri." },
+          { label: "Baris hijau", tone: "rowDone", meaning: "Sesi yang sudah selesai." },
+          { label: "Lokasi: teks biasa", tone: "neutral", meaning: "Sesi milik pasangan lain: hanya bisa dilihat. Mengubahnya butuh izin Kelola semua sesi wawancara." },
+        ],
+      },
+      {
+        group: "Penghitung & filter",
+        items: [
+          { label: "x/y selesai", tone: "ok", meaning: "Jumlah sesi selesai dari total sesi yang tampil, dengan bilah progres hijau." },
+          { label: "Hanya yang saya wawancarai", tone: "neutral", meaning: "Aktif otomatis untuk pewawancara. Hapus centang untuk melihat sesi semua pasangan." },
+          { label: "Sembunyikan yang selesai", tone: "neutral", meaning: "Menyembunyikan sesi yang sudah dicentang selesai agar daftar lebih ringkas." },
+        ],
+      },
+    ],
+    image: {
+      src: "/guide/contoh-sesi-calon-anggota.png",
+      alt: "Contoh satu baris sesi di Jadwal Calon Anggota dengan 10 bagian bernomor dan alur status Menunggu konfirmasi, Dikonfirmasi, Selesai",
+      width: 2440,
+      height: 1460,
+      caption: "Contoh satu baris sesi (nama & NIM adalah data contoh). Klik gambar untuk membuka ukuran penuh.",
+    },
+    tips: [
+      "Daftar diperbarui otomatis saat Anda kembali dari tab lembar wawancara.",
+      "Bila calon mengganti jadwal sebelum Accept, lokasi yang sudah dicatat ikut dikosongkan karena jamnya berubah.",
+    ],
+  },
+  {
+    id: "notifikasi",
+    title: "Notifikasi Calon Anggota",
+    icon: Bell,
+    href: "/dashboard/notifikasi",
+    requires: "Kirim pengumuman",
+    intro:
+      "Mengirim pengumuman yang muncul di lonceng notifikasi pada navbar website untuk semua calon anggota yang login.",
+    steps: [
+      { title: "Buka menu Notifikasi", detail: "Riwayat pengumuman bisa dilihat semua admin; mengirim butuh izin Kirim pengumuman." },
+      {
+        title: "Tulis pengumuman",
+        detail: "Isi judul (3–120 karakter), isi pengumuman, dan link opsional. Cek tampilannya di Pratinjau.",
+      },
+      {
+        title: "Kirim",
+        detail: "Klik Kirim ke Semua Calon Anggota. Lonceng di website menampilkan badge merah berisi jumlah yang belum dibaca.",
+      },
+      {
+        title: "Ubah atau hapus",
+        detail: "Perbaiki salah ketik lewat Ubah (tidak memunculkan badge baru lagi), atau Hapus agar hilang dari lonceng semua calon anggota.",
+      },
+    ],
+    tips: [
+      "Badge hilang setelah calon anggota membuka lonceng.",
+      "Lonceng memeriksa pengumuman baru secara otomatis tiap menit dan saat tab website dibuka kembali.",
     ],
   },
   {
@@ -233,8 +432,15 @@ const ROLE_EXAMPLES: { name: string; permissions: AdminPermission[]; note: strin
   },
   {
     name: "Panitia Inti",
-    permissions: ["applicants.view", "applicants.assess", "oprec.settings", "interview.manage", "interview.schedule"],
-    note: "Mengatur OPREC dan bank pertanyaan, menilai pendaftar.",
+    permissions: [
+      "applicants.view",
+      "applicants.assess",
+      "oprec.settings",
+      "interview.manage",
+      "interview.schedule",
+      "announcements.send",
+    ],
+    note: "Mengatur OPREC, bank pertanyaan, dan pengumuman; menilai pendaftar.",
   },
 ];
 
@@ -247,9 +453,16 @@ function PermissionMark({ on }: { on: boolean }) {
 }
 
 export function GuidePage({ viewer }: GuidePageProps) {
+  const tocItems: GuideTocItem[] = [
+    ...SECTIONS.map((s) => ({ id: s.id, title: s.title })),
+    { id: "hak-akses", title: "Hak Akses per Role" },
+    { id: "aturan-role", title: "Aturan Perubahan Role" },
+  ];
+
   return (
     <div className="flex-1 bg-[#F9F9F8] dark:bg-[#09090b] min-h-screen py-6 px-4 sm:px-8 transition-colors">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto xl:grid xl:grid-cols-[minmax(0,1fr)_15rem] xl:gap-6 xl:items-start">
+      <div className="min-w-0 space-y-6">
         {/* Header */}
         <div className={`${cardClass} space-y-4`}>
           <div className="flex items-start gap-3">
@@ -304,28 +517,16 @@ export function GuidePage({ viewer }: GuidePageProps) {
               </p>
             )}
           </div>
-
-          {/* Daftar isi */}
-          <nav aria-label="Daftar isi" className="flex flex-wrap gap-1.5">
-            {[...SECTIONS.map((s) => ({ id: s.id, title: s.title })), { id: "hak-akses", title: "Hak Akses per Role" }, { id: "aturan-role", title: "Aturan Perubahan Role" }].map(
-              (item, i) => (
-                <a
-                  key={item.id}
-                  href={`#${item.id}`}
-                  className="px-2.5 py-1 rounded-md border border-zinc-200 dark:border-zinc-700 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 hover:border-[#B22234]/60 hover:text-[#B22234] dark:hover:text-rose-400 transition-colors"
-                >
-                  {i + 1}. {item.title}
-                </a>
-              )
-            )}
-          </nav>
         </div>
+
+        {/* Daftar isi (HP/tablet): bar horizontal menempel di atas */}
+        <GuideToc items={tocItems} variant="mobile" />
 
         {/* Panduan fitur */}
         {SECTIONS.map((section, index) => {
           const Icon = section.icon;
           return (
-            <section key={section.id} id={section.id} className={`${cardClass} space-y-4 scroll-mt-6`}>
+            <section key={section.id} id={section.id} className={`${cardClass} space-y-4 scroll-mt-28 xl:scroll-mt-6`}>
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Icon className="w-4 h-4 text-[#B22234] dark:text-rose-400 shrink-0" />
@@ -364,6 +565,54 @@ export function GuidePage({ viewer }: GuidePageProps) {
                 ))}
               </ol>
 
+              {section.statuses && (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Arti setiap status</p>
+                  {section.statuses.map((group) => (
+                    <div key={group.group} className="space-y-1.5">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        {group.group}
+                      </p>
+                      <div className="divide-y divide-zinc-200 dark:divide-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+                        {group.items.map((item) => (
+                          <div key={item.label} className="p-2.5 flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3">
+                            <span className="sm:w-48 shrink-0">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold ${STATUS_TONE[item.tone]}`}
+                              >
+                                {item.label}
+                              </span>
+                            </span>
+                            <span className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">{item.meaning}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {section.image && (
+                <figure className="space-y-1.5">
+                  <a
+                    href={section.image.src}
+                    target="_blank"
+                    rel="noopener"
+                    className="block rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white hover:border-[#B22234]/60 transition-colors"
+                  >
+                    <Image
+                      src={section.image.src}
+                      alt={section.image.alt}
+                      width={section.image.width}
+                      height={section.image.height}
+                      sizes="(min-width: 1024px) 832px, 100vw"
+                      className="w-full h-auto"
+                    />
+                  </a>
+                  <figcaption className="text-[11px] text-zinc-400">{section.image.caption}</figcaption>
+                </figure>
+              )}
+
               {section.tips && (
                 <ul className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-zinc-800 space-y-1 text-[11px] text-zinc-600 dark:text-zinc-400 list-disc pl-7">
                   {section.tips.map((tip) => (
@@ -376,7 +625,7 @@ export function GuidePage({ viewer }: GuidePageProps) {
         })}
 
         {/* Hak akses */}
-        <section id="hak-akses" className={`${cardClass} space-y-4 scroll-mt-6`}>
+        <section id="hak-akses" className={`${cardClass} space-y-4 scroll-mt-28 xl:scroll-mt-6`}>
           <div className="flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-[#B22234] dark:text-rose-400" />
             <h2 className="text-sm sm:text-base font-bold text-[#18181b] dark:text-zinc-100">
@@ -399,7 +648,7 @@ export function GuidePage({ viewer }: GuidePageProps) {
 
           <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300 pt-1">Contoh susunan role</p>
           <div className="overflow-x-auto -mx-1 px-1">
-            <table className="w-full min-w-[640px] text-[11px] border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
+            <table className="w-full min-w-[760px] text-[11px] border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden">
               <thead className="bg-zinc-50 dark:bg-zinc-950/60 text-zinc-600 dark:text-zinc-400">
                 <tr>
                   <th className="text-left font-semibold p-2.5">Role</th>
@@ -448,7 +697,7 @@ export function GuidePage({ viewer }: GuidePageProps) {
         {/* Aturan perubahan role */}
         <section
           id="aturan-role"
-          className="scroll-mt-6 rounded-xl p-5 sm:p-6 border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 space-y-3"
+          className="scroll-mt-28 xl:scroll-mt-6 rounded-xl p-5 sm:p-6 border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 space-y-3"
         >
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 text-amber-700 dark:text-amber-400" />
@@ -483,6 +732,10 @@ export function GuidePage({ viewer }: GuidePageProps) {
             ))}
           </ul>
         </section>
+      </div>
+
+      {/* Daftar isi (PC): kolom kanan menempel mengikuti scroll */}
+      <GuideToc items={tocItems} variant="desktop" />
       </div>
     </div>
   );

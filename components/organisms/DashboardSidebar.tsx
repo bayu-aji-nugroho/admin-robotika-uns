@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { SidebarHeader } from "@/components/molecules/SidebarHeader";
 import { NavSection } from "@/components/molecules/NavSection";
 import { NavItem } from "@/components/atoms/NavItem";
-import { Sliders, Users, BarChart3, ShieldCheck, CalendarClock, BookOpen } from "lucide-react";
+import { Sliders, Users, BarChart3, ShieldCheck, CalendarClock, BookOpen, Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useLocalStorageValue } from "@/utils/useLocalStorageValue";
@@ -201,7 +201,16 @@ export function DashboardSidebar({
             isCollapsed={isCollapsed}
           />
 
-          {/* 4. Statistik */}
+          {/* 4. Notifikasi Calon Anggota (lonceng di website) */}
+          <NavItem
+            label="Notifikasi"
+            icon={Bell}
+            href="/dashboard/notifikasi"
+            isActive={currentPath === "/dashboard/notifikasi"}
+            isCollapsed={isCollapsed}
+          />
+
+          {/* 5. Statistik */}
           <NavItem
             label="Statistik"
             icon={BarChart3}

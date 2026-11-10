@@ -33,6 +33,12 @@ export const ADMIN_PERMISSIONS = [
       "Mengisi kalender sebagai pewawancara dan mengelola sesi miliknya sendiri (lokasi, selesai, lembar wawancara). Sesi pasangan lain hanya bisa dilihat.",
   },
   {
+    key: "announcements.send",
+    label: "Kirim pengumuman",
+    description:
+      "Mengirim, mengubah, dan menghapus notifikasi pengumuman yang muncul di lonceng website calon anggota.",
+  },
+  {
     key: "interview.sessions",
     label: "Kelola semua sesi wawancara",
     description:
