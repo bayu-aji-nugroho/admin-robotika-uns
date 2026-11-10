@@ -3,44 +3,74 @@
 import React, { useState } from "react";
 import { ChevronLeft, ChevronRight, Lock, Save } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
-import { savePairDayAction } from "@/app/actions/interviewSchedule";
+import { saveMyDayAction } from "@/app/actions/interviewSchedule";
 import {
+  INTERVIEW_SLOT_MINUTES,
   SCHEDULE_START_HOURS,
   formatJakartaDate,
+  formatMinuteOfDay,
   jakartaDateKey,
-  jakartaHour,
+  jakartaMinuteOfDay,
   toJakartaIso,
+  toJakartaIsoFromMinutes,
   todayInJakarta,
 } from "@/utils/jakartaTime";
-import type { PairAvailabilitySlot } from "@/utils/interviewSchedule.types";
+import type { MemberAvailabilitySlot } from "@/utils/interviewSchedule.types";
 
 interface AvailabilityCalendarEditorProps {
-  pairId: string;
-  /** Ketersediaan milik pasangan ini (kalender bersama) */
-  slots: PairAvailabilitySlot[];
+  /** Pemilik kalender pribadi yang sedang diedit */
+  adminId: string;
+  /** true bila kalender milik admin yang sedang login */
+  isSelf: boolean;
+  /** Slot kalender pribadi pemilik */
+  slots: MemberAvailabilitySlot[];
+  /** Pasangan pemilik (bila ada), untuk menandai slot yang cocok */
+  partner?: { name: string; slots: MemberAvailabilitySlot[] } | null;
+  /** Slot yang sudah dipesan calon anggota dengan pemilik sebagai pewawancara: startAt(ms) -> nama */
+  bookedByTime: Map<number, string>;
   onResult: (type: "success" | "error", message: string) => void;
 }
 
 const WEEKDAYS = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 const pad = (n: number) => String(n).padStart(2, "0");
 const toDateStr = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
-const hourLabel = (h: number) => `${pad(h)}.00–${pad(h + 1)}.00`;
+const slotLabel = (m: number) => `${formatMinuteOfDay(m)}–${formatMinuteOfDay(m + INTERVIEW_SLOT_MINUTES)}`;
+
+/** Batas kalender: sama dengan rentang data RPC get_schedule_dashboard (60 hari ke depan) */
+export const SCHEDULE_DAYS_AHEAD = 59;
+
+export function addDays(date: string, days: number) {
+  const [y, m, d] = date.split("-").map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d + days));
+  return toDateStr(next.getUTCFullYear(), next.getUTCMonth(), next.getUTCDate());
+}
 
 function parseDateStr(date: string) {
   const [y, m, d] = date.split("-").map(Number);
   return { y, m: m - 1, d };
 }
 
-function MonthCalendar({
+/**
+ * Kalender bulanan (Senin di awal). Tanggal lampau dinonaktifkan; tanggal yang punya
+ * angka di `countsByDate` diberi penanda (titik, atau badge angka bila `showCount`).
+ */
+export function MonthCalendar({
   selectedDate,
   today,
   countsByDate,
   onSelect,
+  legend,
+  showCount = false,
+  maxDate,
 }: {
   selectedDate: string;
   today: string;
   countsByDate: Map<string, number>;
   onSelect: (date: string) => void;
+  legend?: string;
+  showCount?: boolean;
+  /** Tanggal terakhir yang bisa dipilih (YYYY-MM-DD) */
+  maxDate?: string;
 }) {
   const initial = parseDateStr(selectedDate);
   const [view, setView] = useState({ y: initial.y, m: initial.m });
@@ -55,6 +85,8 @@ function MonthCalendar({
 
   const todayParts = parseDateStr(today);
   const canGoPrev = view.y > todayParts.y || (view.y === todayParts.y && view.m > todayParts.m);
+  const maxParts = maxDate ? parseDateStr(maxDate) : null;
+  const canGoNext = !maxParts || view.y < maxParts.y || (view.y === maxParts.y && view.m < maxParts.m);
 
   const shiftMonth = (delta: number) => {
     setView((v) => {
@@ -84,8 +116,9 @@ function MonthCalendar({
         <button
           type="button"
           onClick={() => shiftMonth(1)}
+          disabled={!canGoNext}
           aria-label="Bulan berikutnya"
-          className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 cursor-pointer"
+          className="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -100,7 +133,7 @@ function MonthCalendar({
         {cells.map((day, idx) => {
           if (day === null) return <span key={`empty-${idx}`} />;
           const dateStr = toDateStr(view.y, view.m, day);
-          const isPast = dateStr < today;
+          const isPast = dateStr < today || (maxDate !== undefined && dateStr > maxDate);
           const isSelected = dateStr === selectedDate;
           const isToday = dateStr === today;
           const count = countsByDate.get(dateStr) || 0;
@@ -115,79 +148,109 @@ function MonthCalendar({
                   ? "bg-[#B22234] text-white shadow-xs"
                   : isPast
                   ? "text-zinc-300 dark:text-zinc-700"
+                  : count > 0 && showCount
+                  ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
                   : "text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               } ${isToday && !isSelected ? "ring-1 ring-[#B22234]/50" : ""}`}
             >
               {day}
-              {count > 0 && (
-                <span
-                  className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${
-                    isSelected ? "bg-white" : "bg-[#B22234] dark:bg-rose-400"
-                  }`}
-                />
-              )}
+              {count > 0 &&
+                (showCount ? (
+                  <span
+                    className={`absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold leading-4 ${
+                      isSelected ? "bg-white text-[#B22234]" : "bg-emerald-600 text-white"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                ) : (
+                  <span
+                    className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${
+                      isSelected ? "bg-white" : "bg-[#B22234] dark:bg-rose-400"
+                    }`}
+                  />
+                ))}
             </button>
           );
         })}
       </div>
-      <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#B22234] dark:bg-rose-400" /> Tanggal yang sudah diisi pasangan
-      </p>
+      {legend && (
+        <p className="text-[11px] text-zinc-400 flex items-center gap-1.5">
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${showCount ? "bg-emerald-600" : "bg-[#B22234] dark:bg-rose-400"}`}
+          />{" "}
+          {legend}
+        </p>
+      )}
     </div>
   );
 }
 
-function DayHoursEditor({
-  pairId,
+function DaySlotsEditor({
+  adminId,
+  isSelf,
   date,
   savedSlots,
+  partnerName,
+  partnerMinutes,
+  bookedByTime,
   onResult,
 }: {
-  pairId: string;
+  adminId: string;
+  isSelf: boolean;
   date: string;
-  savedSlots: PairAvailabilitySlot[];
+  savedSlots: MemberAvailabilitySlot[];
+  partnerName: string | null;
+  partnerMinutes: Set<number>;
+  bookedByTime: Map<number, string>;
   onResult: (type: "success" | "error", message: string) => void;
 }) {
-  const savedByHour = new Map(savedSlots.map((s) => [jakartaHour(s.startAt), s]));
-  const [selected, setSelected] = useState<Set<number>>(() => new Set(savedByHour.keys()));
-  const [location, setLocation] = useState(
-    () => savedSlots.find((s) => s.location)?.location || ""
-  );
+  const savedByMinute = new Map(savedSlots.map((s) => [jakartaMinuteOfDay(s.startAt), s]));
+  const [selected, setSelected] = useState<Set<number>>(() => new Set(savedByMinute.keys()));
   const [nowMs] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
 
-  const isPastHour = (h: number) => new Date(toJakartaIso(date, h)).getTime() <= nowMs;
-  const isLockedHour = (h: number) => Boolean(savedByHour.get(h)?.booking);
-  const selectableHours = SCHEDULE_START_HOURS.filter((h) => !isPastHour(h) && !isLockedHour(h));
+  const slotTime = (m: number) => new Date(toJakartaIsoFromMinutes(date, m)).getTime();
+  const bookingOf = (m: number) => bookedByTime.get(slotTime(m));
+  const isPast = (m: number) => slotTime(m) <= nowMs;
+  const isLocked = (m: number) => Boolean(bookingOf(m));
+  const matchCount = Array.from(selected).filter((m) => partnerMinutes.has(m)).length;
+  const canToggle = (m: number) => !isPast(m) && !isLocked(m);
+  const allSlots = SCHEDULE_START_HOURS.flatMap((h) => [h * 60, h * 60 + INTERVIEW_SLOT_MINUTES]);
+  const selectableSlots = allSlots.filter(canToggle);
 
-  const toggle = (h: number) => {
-    if (isPastHour(h) || isLockedHour(h)) return;
+  const update = (minutes: number[], on: boolean) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(h)) next.delete(h);
-      else next.add(h);
-      return next;
-    });
-  };
-
-  const setAll = (on: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      for (const h of selectableHours) {
-        if (on) next.add(h);
-        else next.delete(h);
+      for (const m of minutes) {
+        if (!canToggle(m)) continue;
+        if (on) next.add(m);
+        else next.delete(m);
       }
       return next;
     });
   };
 
-  const savedKeys = Array.from(savedByHour.keys()).sort((a, b) => a - b).join(",");
+  const toggle = (m: number) => update([m], !selected.has(m));
+
+  // Klik label jam = pilih/batalkan kedua slot (:00 dan :30) di jam tersebut
+  const toggleHour = (h: number) => {
+    const pair = [h * 60, h * 60 + INTERVIEW_SLOT_MINUTES].filter(canToggle);
+    if (pair.length === 0) return;
+    update(pair, !pair.every((m) => selected.has(m)));
+  };
+
+  const savedKeys = Array.from(savedByMinute.keys()).sort((a, b) => a - b).join(",");
   const selectedKeys = Array.from(selected).sort((a, b) => a - b).join(",");
   const isDirty = savedKeys !== selectedKeys;
 
   const handleSave = async () => {
     setBusy(true);
-    const res = await savePairDayAction({ pairId, date, hours: Array.from(selected), location });
+    const res = await saveMyDayAction({
+      adminId: isSelf ? null : adminId,
+      date,
+      slots: Array.from(selected),
+    });
     setBusy(false);
     if (!res.success || !res.data) {
       onResult("error", res.error || "Gagal menyimpan jadwal.");
@@ -195,10 +258,69 @@ function DayHoursEditor({
     }
     const { added, removed, kept_booked: keptBooked } = res.data;
     const parts = [];
-    if (added) parts.push(`${added} jam ditambahkan`);
-    if (removed) parts.push(`${removed} jam dihapus`);
-    if (keptBooked) parts.push(`${keptBooked} jam sudah dipesan sehingga tetap dipertahankan`);
+    if (added) parts.push(`${added} slot ditambahkan`);
+    if (removed) parts.push(`${removed} slot dihapus`);
+    if (keptBooked) parts.push(`${keptBooked} slot sudah dipesan sehingga tetap dipertahankan`);
     onResult("success", parts.length ? `${parts.join(", ")}.` : "Tidak ada perubahan.");
+  };
+
+  const renderSlot = (m: number) => {
+    const booking = bookingOf(m);
+    const past = isPast(m);
+    const on = selected.has(m);
+    const partnerOn = partnerMinutes.has(m);
+    const matched = on && partnerOn;
+    const title = booking
+      ? `Dipesan: ${booking}`
+      : past
+      ? "Sudah lewat"
+      : matched
+      ? `Cocok: Anda dan ${partnerName} sama-sama bisa, slot ini terbuka untuk calon anggota`
+      : partnerOn
+      ? `${partnerName} bisa di jam ini`
+      : undefined;
+    return (
+      <button
+        key={m}
+        type="button"
+        onClick={() => toggle(m)}
+        disabled={busy || past || Boolean(booking)}
+        title={title}
+        className={`flex-1 min-w-0 px-2 py-1.5 rounded-md border text-left transition-colors cursor-pointer disabled:cursor-not-allowed ${
+          booking
+            ? "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300"
+            : past
+            ? "bg-zinc-50 dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-300 dark:text-zinc-600"
+            : matched
+            ? "bg-emerald-600 border-emerald-600 text-white shadow-xs"
+            : on
+            ? "bg-[#B22234] border-[#B22234] text-white shadow-xs"
+            : partnerOn
+            ? "bg-white dark:bg-zinc-950 border-dashed border-emerald-400 dark:border-emerald-700 text-zinc-700 dark:text-zinc-300 hover:border-[#B22234]/60"
+            : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-[#B22234]/60"
+        }`}
+      >
+        <span className="block text-[11px] font-mono font-semibold">{slotLabel(m)}</span>
+        <span className="flex items-center gap-1 text-[10px] font-medium opacity-90 truncate">
+          {booking ? (
+            <>
+              <Lock className="w-2.5 h-2.5 shrink-0" />
+              <span className="truncate">{booking}</span>
+            </>
+          ) : past ? (
+            "Lewat"
+          ) : matched ? (
+            "Cocok ✓"
+          ) : on ? (
+            partnerName ? "Bisa · pasangan belum" : "Bisa"
+          ) : partnerOn ? (
+            "Pasangan bisa"
+          ) : (
+            "Tidak bisa"
+          )}
+        </span>
+      </button>
+    );
   };
 
   return (
@@ -208,16 +330,16 @@ function DayHoursEditor({
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
-            onClick={() => setAll(true)}
-            disabled={busy || selectableHours.length === 0}
+            onClick={() => update(selectableSlots, true)}
+            disabled={busy || selectableSlots.length === 0}
             className="px-2 py-1 rounded-md text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer disabled:opacity-40"
           >
             Pilih semua
           </button>
           <button
             type="button"
-            onClick={() => setAll(false)}
-            disabled={busy || selectableHours.length === 0}
+            onClick={() => update(selectableSlots, false)}
+            disabled={busy || selectableSlots.length === 0}
             className="px-2 py-1 rounded-md text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer disabled:opacity-40"
           >
             Kosongkan
@@ -226,78 +348,52 @@ function DayHoursEditor({
       </div>
 
       <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-        Klik jam saat Anda <strong>bisa</strong> mewawancarai. Boleh tidak berurutan, misalnya 08.00–10.00
-        lalu lanjut 15.00–21.00.
+        Satu sesi = <strong>30 menit</strong>. Klik slot saat {isSelf ? "Anda" : "admin ini"} <strong>bisa</strong>{" "}
+        mewawancarai, atau klik label jam untuk memilih kedua slotnya sekaligus. Boleh tidak berurutan.
       </p>
+      {partnerName ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-zinc-500 dark:text-zinc-400">
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600" /> Cocok dengan {partnerName} (terbuka untuk
+            calon anggota)
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[#B22234]" /> Hanya {isSelf ? "Anda" : "admin ini"}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="w-2.5 h-2.5 rounded-sm border border-dashed border-emerald-500" /> Hanya {partnerName}
+          </span>
+        </div>
+      ) : (
+        <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400">
+          Belum berpasangan: jadwal ini tersimpan, tetapi baru bisa dipesan calon anggota setelah ada pasangan yang
+          juga kosong di jam yang sama.
+        </p>
+      )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-1.5">
-        {SCHEDULE_START_HOURS.map((h) => {
-          const saved = savedByHour.get(h);
-          const booking = saved?.booking;
-          const past = isPastHour(h);
-          const on = selected.has(h);
-          const title = booking
-            ? `Dipesan: ${booking.applicantName}`
-            : past
-            ? "Jam sudah lewat"
-            : saved?.updatedByName
-            ? `Diisi oleh ${saved.updatedByName}`
-            : undefined;
-          return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-x-3 gap-y-1.5">
+        {SCHEDULE_START_HOURS.map((h) => (
+          <div key={h} className="flex items-stretch gap-1.5">
             <button
-              key={h}
               type="button"
-              onClick={() => toggle(h)}
-              disabled={busy || past || Boolean(booking)}
-              title={title}
-              className={`px-2 py-2 rounded-lg border text-left transition-colors cursor-pointer disabled:cursor-not-allowed ${
-                booking
-                  ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
-                  : past
-                  ? "bg-zinc-50 dark:bg-zinc-900 border-zinc-100 dark:border-zinc-800 text-zinc-300 dark:text-zinc-600"
-                  : on
-                  ? "bg-[#B22234] border-[#B22234] text-white shadow-xs"
-                  : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:border-[#B22234]/60"
-              }`}
+              onClick={() => toggleHour(h)}
+              disabled={busy}
+              title={`Pilih/batalkan jam ${pad(h)}.00–${pad(h + 1)}.00`}
+              className="w-11 shrink-0 rounded-md text-[11px] font-mono font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer disabled:cursor-not-allowed"
             >
-              <span className="block text-xs font-mono font-semibold">{hourLabel(h)}</span>
-              <span className="flex items-center gap-1 text-[10px] font-medium opacity-90 truncate">
-                {booking ? (
-                  <>
-                    <Lock className="w-2.5 h-2.5 shrink-0" />
-                    <span className="truncate">{booking.applicantName}</span>
-                  </>
-                ) : past ? (
-                  "Lewat"
-                ) : on ? (
-                  saved?.updatedByName ? `Bisa · ${saved.updatedByName}` : "Bisa"
-                ) : (
-                  "Tidak bisa"
-                )}
-              </span>
+              {pad(h)}
             </button>
-          );
-        })}
+            {renderSlot(h * 60)}
+            {renderSlot(h * 60 + INTERVIEW_SLOT_MINUTES)}
+          </div>
+        ))}
       </div>
 
-      <label className="block space-y-1">
-        <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
-          Lokasi / link wawancara untuk jam baru (opsional)
-        </span>
-        <input
-          type="text"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          maxLength={300}
-          placeholder="Mis. Sekretariat Robotika UNS atau https://meet.google.com/..."
-          disabled={busy}
-          className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-[#E4E4E7] dark:border-zinc-700/80 rounded-lg text-xs sm:text-sm text-[#18181b] dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors"
-        />
-      </label>
 
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-          {selected.size} sesi × 60 menit
+          {selected.size} slot dipilih
+          {partnerName ? ` · ${matchCount} cocok dengan ${partnerName}` : ""}
         </span>
         <Button
           type="button"
@@ -315,7 +411,14 @@ function DayHoursEditor({
   );
 }
 
-export function AvailabilityCalendarEditor({ pairId, slots, onResult }: AvailabilityCalendarEditorProps) {
+export function AvailabilityCalendarEditor({
+  adminId,
+  isSelf,
+  slots,
+  partner = null,
+  bookedByTime,
+  onResult,
+}: AvailabilityCalendarEditorProps) {
   const [today] = useState(() => todayInJakarta());
   const [selectedDate, setSelectedDate] = useState(today);
 
@@ -326,11 +429,13 @@ export function AvailabilityCalendarEditor({ pairId, slots, onResult }: Availabi
   }
 
   const savedSlots = slots.filter((s) => jakartaDateKey(s.startAt) === selectedDate);
-  // Remount editor jam saat pasangan, tanggal, atau data tersimpan berubah,
-  // agar pilihan ter-reset ke data terbaru (termasuk perubahan dari pasangan)
-  const editorKey = `${pairId}|${selectedDate}|${savedSlots
-    .map((s) => `${s.id}:${s.booking ? 1 : 0}`)
-    .join(",")}`;
+  const partnerMinutes = new Set(
+    (partner?.slots || [])
+      .filter((s) => jakartaDateKey(s.startAt) === selectedDate)
+      .map((s) => jakartaMinuteOfDay(s.startAt))
+  );
+  // Remount editor saat pemilik, tanggal, atau data tersimpan berubah, agar pilihan ter-reset
+  const editorKey = `${adminId}|${selectedDate}|${savedSlots.map((s) => s.id).join(",")}`;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,280px)_1fr] gap-5 pt-3 border-t border-[#E4E4E7] dark:border-zinc-800">
@@ -339,13 +444,19 @@ export function AvailabilityCalendarEditor({ pairId, slots, onResult }: Availabi
         today={today}
         countsByDate={countsByDate}
         onSelect={setSelectedDate}
+        legend={isSelf ? "Tanggal yang sudah Anda isi" : "Tanggal yang sudah diisi admin ini"}
+        maxDate={addDays(today, SCHEDULE_DAYS_AHEAD)}
       />
       <div className="lg:border-l lg:pl-5 border-[#E4E4E7] dark:border-zinc-800">
-        <DayHoursEditor
+        <DaySlotsEditor
           key={editorKey}
-          pairId={pairId}
+          adminId={adminId}
+          isSelf={isSelf}
           date={selectedDate}
           savedSlots={savedSlots}
+          partnerName={partner?.name ?? null}
+          partnerMinutes={partnerMinutes}
+          bookedByTime={bookedByTime}
           onResult={onResult}
         />
       </div>

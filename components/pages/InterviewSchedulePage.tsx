@@ -4,7 +4,7 @@ import React from "react";
 import { InterviewScheduleManager } from "@/components/organisms/InterviewScheduleManager";
 import type {
   InterviewPair,
-  PairAvailabilitySlot,
+  MemberAvailabilitySlot,
   ScheduleAdmin,
   ScheduledInterview,
   ScheduleViewer,
@@ -14,7 +14,7 @@ interface InterviewSchedulePageProps {
   viewer: ScheduleViewer;
   admins: ScheduleAdmin[];
   pairs: InterviewPair[];
-  availability: PairAvailabilitySlot[];
+  memberAvailability: MemberAvailabilitySlot[];
   scheduled: ScheduledInterview[];
 }
 

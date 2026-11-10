@@ -1,12 +1,19 @@
 // Seluruh jadwal wawancara memakai zona waktu WIB (Asia/Jakarta, UTC+7, tanpa DST).
 export const JAKARTA_TIME_ZONE = "Asia/Jakarta";
 
-// Rentang jam wawancara: sesi pertama mulai 07.00, sesi terakhir selesai 21.00
+// Satu sesi wawancara = 30 menit. Sesi pertama mulai 07.00, sesi terakhir selesai 21.00.
+// Slot dinyatakan sebagai menit sejak 00.00 WIB (420 = 07.00, 450 = 07.30, ..., 1230 = 20.30)
+// dan harus sama dengan validasi RPC set_admin_availability.
+export const INTERVIEW_SLOT_MINUTES = 30;
 export const SCHEDULE_MIN_HOUR = 7;
 export const SCHEDULE_MAX_HOUR = 21;
 export const SCHEDULE_START_HOURS = Array.from(
   { length: SCHEDULE_MAX_HOUR - SCHEDULE_MIN_HOUR },
   (_, i) => SCHEDULE_MIN_HOUR + i
+);
+export const SCHEDULE_SLOT_MINUTES = Array.from(
+  { length: ((SCHEDULE_MAX_HOUR - SCHEDULE_MIN_HOUR) * 60) / INTERVIEW_SLOT_MINUTES },
+  (_, i) => SCHEDULE_MIN_HOUR * 60 + i * INTERVIEW_SLOT_MINUTES
 );
 
 /** Jam WIB (0–23) dari sebuah timestamp. */
@@ -19,11 +26,35 @@ export function jakartaHour(iso: string): number {
   return parseInt(hour, 10);
 }
 
+/** Menit sejak 00.00 WIB dari sebuah timestamp (mis. 08.30 -> 510). */
+export function jakartaMinuteOfDay(iso: string): number {
+  const [h, m] = new Intl.DateTimeFormat("en-GB", {
+    timeZone: JAKARTA_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  })
+    .format(new Date(iso))
+    .split(":")
+    .map(Number);
+  return h * 60 + m;
+}
+
 const pad = (n: number) => String(n).padStart(2, "0");
+
+/** 510 -> "08.30" */
+export function formatMinuteOfDay(minutes: number): string {
+  return `${pad(Math.floor(minutes / 60))}.${pad(minutes % 60)}`;
+}
 
 /** "2026-11-15" + 9 -> "2026-11-15T09:00:00+07:00" */
 export function toJakartaIso(date: string, hour: number): string {
   return `${date}T${pad(hour)}:00:00+07:00`;
+}
+
+/** "2026-11-15" + 510 -> "2026-11-15T08:30:00+07:00" */
+export function toJakartaIsoFromMinutes(date: string, minutes: number): string {
+  return `${date}T${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}:00+07:00`;
 }
 
 /** Tanggal hari ini di WIB dalam format YYYY-MM-DD (untuk atribut min input date). */
@@ -92,10 +123,10 @@ export function formatJakartaDate(iso: string): string {
   });
 }
 
-/** "09.00–10.00" (sesi 60 menit) */
+/** "09.00–09.30" (rentang satu sesi wawancara) */
 export function formatJakartaHourRange(iso: string): string {
   const start = new Date(iso);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const end = new Date(start.getTime() + INTERVIEW_SLOT_MINUTES * 60 * 1000);
   const fmt = (d: Date) =>
     d.toLocaleTimeString("id-ID", {
       timeZone: JAKARTA_TIME_ZONE,

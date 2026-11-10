@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { SidebarHeader } from "@/components/molecules/SidebarHeader";
 import { NavSection } from "@/components/molecules/NavSection";
 import { NavItem } from "@/components/atoms/NavItem";
-import { Sliders, Users, BarChart3, ShieldCheck, CalendarClock } from "lucide-react";
+import { Sliders, Users, BarChart3, ShieldCheck, CalendarClock, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useLocalStorageValue } from "@/utils/useLocalStorageValue";
@@ -197,7 +197,7 @@ export function DashboardSidebar({
             label="Jadwal Wawancara"
             icon={CalendarClock}
             href="/dashboard/jadwal"
-            isActive={currentPath === "/dashboard/jadwal"}
+            isActive={currentPath.startsWith("/dashboard/jadwal")}
             isCollapsed={isCollapsed}
           />
 
@@ -223,6 +223,17 @@ export function DashboardSidebar({
             />
           </NavSection>
         )}
+
+        {/* Section # bantuan (semua admin) */}
+        <NavSection title="bantuan" isCollapsed={isCollapsed}>
+          <NavItem
+            label="Guide"
+            icon={BookOpen}
+            href="/dashboard/guide"
+            isActive={currentPath === "/dashboard/guide"}
+            isCollapsed={isCollapsed}
+          />
+        </NavSection>
       </div>
 
       {/* Resizable Drag Handle pada sisi kanan border (Desktop only) */}

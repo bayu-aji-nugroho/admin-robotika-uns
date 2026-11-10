@@ -29,7 +29,14 @@ export const ADMIN_PERMISSIONS = [
   {
     key: "interview.schedule",
     label: "Jadwal wawancara",
-    description: "Mengisi jam ketersediaan sebagai pewawancara.",
+    description:
+      "Mengisi kalender sebagai pewawancara dan mengelola sesi miliknya sendiri (lokasi, selesai, lembar wawancara). Sesi pasangan lain hanya bisa dilihat.",
+  },
+  {
+    key: "interview.sessions",
+    label: "Kelola semua sesi wawancara",
+    description:
+      "Mengubah lokasi, tanda selesai, dan lembar wawancara di semua sesi, termasuk milik pasangan lain.",
   },
 ] as const;
 
