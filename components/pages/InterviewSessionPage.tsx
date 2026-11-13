@@ -34,6 +34,13 @@ export function InterviewSessionPage({ session: s, questions, viewer }: Intervie
   };
 
   const setDone = async (done: boolean) => {
+    if (
+      done &&
+      new Date(s.startAt).getTime() > Date.now() &&
+      !window.confirm(`Jam sesi (${formatJakartaHourRange(s.startAt)}) belum tiba. Tandai wawancara ini selesai sekarang?`)
+    ) {
+      return false;
+    }
     setBusy(true);
     const res = await setInterviewCompletedAction(s.id, done);
     setBusy(false);
@@ -106,7 +113,7 @@ export function InterviewSessionPage({ session: s, questions, viewer }: Intervie
               <button
                 type="button"
                 onClick={() => setDone(!isDone)}
-                disabled={busy || (!isDone && !hasStarted)}
+                disabled={busy}
                 className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                   isDone
                     ? "border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800"
@@ -142,7 +149,7 @@ export function InterviewSessionPage({ session: s, questions, viewer }: Intervie
           variant="page"
           applicantId={s.applicantId}
           questions={questions}
-          canComplete={canEdit && !isDone && hasStarted}
+          canComplete={canEdit && !isDone}
           onComplete={() => setDone(true)}
           onResult={handleResult}
         />

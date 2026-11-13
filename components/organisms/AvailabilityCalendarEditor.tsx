@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Lock, Save } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 import { saveMyDayAction } from "@/app/actions/interviewSchedule";
@@ -207,8 +207,14 @@ function DaySlotsEditor({
 }) {
   const savedByMinute = new Map(savedSlots.map((s) => [jakartaMinuteOfDay(s.startAt), s]));
   const [selected, setSelected] = useState<Set<number>>(() => new Set(savedByMinute.keys()));
-  const [nowMs] = useState(() => Date.now());
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
+
+  // Perbarui "sekarang" tiap 30 detik agar slot yang jamnya lewat saat halaman terbuka ikut terkunci
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const slotTime = (m: number) => new Date(toJakartaIsoFromMinutes(date, m)).getTime();
   const bookingOf = (m: number) => bookedByTime.get(slotTime(m));
@@ -240,16 +246,33 @@ function DaySlotsEditor({
     update(pair, !pair.every((m) => selected.has(m)));
   };
 
-  const savedKeys = Array.from(savedByMinute.keys()).sort((a, b) => a - b).join(",");
-  const selectedKeys = Array.from(selected).sort((a, b) => a - b).join(",");
-  const isDirty = savedKeys !== selectedKeys;
+  // Slot lampau tidak bisa diubah lagi, jadi tidak dihitung sebagai perubahan
+  const futureKeys = (keys: Iterable<number>) =>
+    Array.from(keys)
+      .filter((m) => !isPast(m))
+      .sort((a, b) => a - b)
+      .join(",");
+  const isDirty = futureKeys(savedByMinute.keys()) !== futureKeys(selected);
 
   const handleSave = async () => {
+    // Server hanya menyimpan slot yang belum lewat; slot yang lewat saat halaman terbuka dibuang di sini
+    const now = Date.now();
+    setNowMs(now);
+    const expired = Array.from(selected).filter((m) => slotTime(m) <= now && !savedByMinute.has(m));
+    if (expired.length) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        for (const m of expired) next.delete(m);
+        return next;
+      });
+    }
+    const slots = Array.from(selected).filter((m) => !expired.includes(m));
+
     setBusy(true);
     const res = await saveMyDayAction({
       adminId: isSelf ? null : adminId,
       date,
-      slots: Array.from(selected),
+      slots,
     });
     setBusy(false);
     if (!res.success || !res.data) {
@@ -261,7 +284,13 @@ function DaySlotsEditor({
     if (added) parts.push(`${added} slot ditambahkan`);
     if (removed) parts.push(`${removed} slot dihapus`);
     if (keptBooked) parts.push(`${keptBooked} slot sudah dipesan sehingga tetap dipertahankan`);
-    onResult("success", parts.length ? `${parts.join(", ")}.` : "Tidak ada perubahan.");
+    if (expired.length) {
+      parts.push(`${expired.length} slot tidak disimpan karena jamnya sudah lewat (${expired.sort((a, b) => a - b).map(slotLabel).join(", ")})`);
+    }
+    onResult(
+      expired.length && !added && !removed ? "error" : "success",
+      parts.length ? `${parts.join(", ")}.` : "Tidak ada perubahan."
+    );
   };
 
   const renderSlot = (m: number) => {

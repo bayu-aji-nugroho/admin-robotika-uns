@@ -46,6 +46,13 @@ export function ScheduledSessionRow({
   const hasStarted = new Date(s.startAt).getTime() <= nowMs;
 
   const setDone = async (done: boolean) => {
+    if (
+      done &&
+      !hasStarted &&
+      !window.confirm(`Jam sesi (${formatJakartaHourRange(s.startAt)}) belum tiba. Tandai wawancara ${s.applicantName} selesai sekarang?`)
+    ) {
+      return false;
+    }
     setBusy(true);
     const res = await setInterviewCompletedAction(s.id, done);
     setBusy(false);
@@ -69,7 +76,7 @@ export function ScheduledSessionRow({
           <button
             type="button"
             onClick={() => setDone(!isDone)}
-            disabled={!canEdit || busy || (!isDone && !hasStarted)}
+            disabled={!canEdit || busy}
             aria-pressed={isDone}
             aria-label={isDone ? "Batalkan tanda selesai" : "Tandai wawancara selesai"}
             title={
@@ -80,7 +87,7 @@ export function ScheduledSessionRow({
                 : isDone
                 ? "Klik untuk membatalkan tanda selesai"
                 : !hasStarted
-                ? "Sesi belum dimulai"
+                ? "Jam sesi belum tiba, tetap bisa ditandai selesai"
                 : "Tandai wawancara selesai"
             }
             className={`mt-0.5 w-5 h-5 shrink-0 rounded-md border flex items-center justify-center transition-colors cursor-pointer disabled:cursor-not-allowed ${

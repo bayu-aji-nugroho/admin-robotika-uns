@@ -265,7 +265,7 @@ const SECTIONS: GuideSection[] = [
     tips: [
       "Daftar sesi otomatis hanya menampilkan sesi Anda. Hapus centang “Hanya yang saya wawancarai” untuk melihat semua.",
       "Slot yang sudah dipesan calon anggota terkunci dan tidak ikut terhapus saat Anda mengubah kalender.",
-      "Sesi hanya bisa ditandai selesai setelah jam mulainya lewat.",
+      "Sesi bisa ditandai selesai kapan saja, termasuk bila wawancara dilakukan lebih awal dari jadwal (akan diminta konfirmasi).",
     ],
   },
   {
@@ -336,8 +336,8 @@ const SECTIONS: GuideSection[] = [
       {
         group: "Tanda pada baris sesi",
         items: [
-          { label: "☐ Kotak pudar", tone: "past", meaning: "Sesi belum dimulai, jadi belum bisa dicentang selesai." },
-          { label: "☐ Kotak kosong", tone: "off", meaning: "Sesi sudah dimulai/lewat dan belum dicentang. Klik untuk menandai selesai." },
+          { label: "☐ Kotak pudar", tone: "past", meaning: "Sesi pasangan lain (hanya-baca), tidak bisa Anda centang." },
+          { label: "☐ Kotak kosong", tone: "off", meaning: "Belum dicentang. Klik untuk menandai selesai; bila jam sesi belum tiba akan diminta konfirmasi." },
           { label: "✓ Kotak hijau", tone: "match", meaning: "Sudah selesai. Klik lagi untuk membatalkan bila salah centang." },
           { label: "Baris merah muda", tone: "rowMine", meaning: "Sesi yang Anda wawancarai sendiri." },
           { label: "Baris hijau", tone: "rowDone", meaning: "Sesi yang sudah selesai." },
