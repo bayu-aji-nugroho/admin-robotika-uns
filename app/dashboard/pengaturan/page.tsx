@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
 import { getAdminAccess, hasPermission } from "@/utils/adminAccess";
+import type { ApplicantEmailWhitelistItem } from "@/components/organisms/ApplicantEmailWhitelistCard";
 
 export const instant = false;
 
@@ -68,6 +69,10 @@ export default async function PengaturanOprecRoute() {
   const access = await getAdminAccess(supabase, user.email);
   const canManage = hasPermission(access, "interview.manage");
   const canEditSettings = hasPermission(access, "oprec.settings");
+  const canViewWhitelist = canEditSettings || hasPermission(access, "viewer.readonly");
+  const whitelist = canViewWhitelist
+    ? ((await supabase.rpc("list_applicant_email_whitelist")).data as ApplicantEmailWhitelistItem[] | null) || []
+    : [];
 
   return (
     <OprecSettingsPage
@@ -86,6 +91,7 @@ export default async function PengaturanOprecRoute() {
       initialQuestions={questions}
       canManage={canManage}
       canEditSettings={canEditSettings}
+      emailWhitelist={canViewWhitelist ? whitelist : null}
       userRole={adminRecord.role_oprec || "admin"}
       divisions={divisions}
     />

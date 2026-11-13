@@ -7,6 +7,10 @@ import {
   DivisionOption,
 } from "@/components/organisms/InterviewQuestionsEditor";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
+import {
+  ApplicantEmailWhitelistCard,
+  type ApplicantEmailWhitelistItem,
+} from "@/components/organisms/ApplicantEmailWhitelistCard";
 
 interface OprecSettingsPageProps {
   initialSettings: {
@@ -22,6 +26,8 @@ interface OprecSettingsPageProps {
   initialQuestions?: InterviewQuestionItem[];
   canManage?: boolean;
   canEditSettings?: boolean;
+  /** null = tidak berhak melihat pengecualian login SSO */
+  emailWhitelist?: ApplicantEmailWhitelistItem[] | null;
   userRole?: string;
   divisions?: DivisionOption[];
 }
@@ -31,6 +37,7 @@ export function OprecSettingsPage({
   initialQuestions = [],
   canManage = false,
   canEditSettings = false,
+  emailWhitelist = null,
   userRole = "admin",
   divisions = [],
 }: OprecSettingsPageProps) {
@@ -48,6 +55,9 @@ export function OprecSettingsPage({
           updatedAt={initialSettings.updated_at}
           canEdit={canEditSettings}
         />
+
+        {/* Pengecualian login SSO untuk calon anggota yang akun SSO-nya bermasalah */}
+        {emailWhitelist && <ApplicantEmailWhitelistCard items={emailWhitelist} canEdit={canEditSettings} />}
 
         {/* Interview Questions Editor: General & Per Divisi */}
         <InterviewQuestionsEditor

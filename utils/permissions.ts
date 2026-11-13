@@ -12,7 +12,7 @@ export const ADMIN_PERMISSIONS = [
   {
     key: "applicants.view",
     label: "Lihat pendaftar",
-    description: "Melihat daftar, detail, dan CV pendaftar.",
+    description: "Melihat daftar, detail, CV pendaftar, dan halaman Statistik.",
   },
   {
     key: "applicants.assess",
@@ -27,7 +27,8 @@ export const ADMIN_PERMISSIONS = [
   {
     key: "oprec.settings",
     label: "Pengaturan OPREC",
-    description: "Membuka/menutup pendaftaran dan mengubah label pengumuman.",
+    description:
+      "Membuka/menutup pendaftaran, jadwal buka-tutup, label, tanggal pengumuman, batas pemilihan jadwal wawancara, dan pengecualian login SSO.",
   },
   {
     key: "interview.manage",

@@ -241,8 +241,8 @@ export function DashboardSidebar({
           <NavItem
             label="Statistik"
             icon={BarChart3}
-            href="#statistik"
-            isActive={false}
+            href="/dashboard/statistik"
+            isActive={currentPath === "/dashboard/statistik"}
             isCollapsed={isCollapsed}
           />
         </NavSection>

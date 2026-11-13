@@ -2,6 +2,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  BarChart3,
   Bell,
   ListChecks,
   BookOpen,
@@ -155,7 +156,8 @@ const SECTIONS: GuideSection[] = [
     icon: Sliders,
     href: "/dashboard/pengaturan",
     requires: "Pengaturan OPREC · Kelola pertanyaan wawancara",
-    intro: "Mengatur kapan pendaftaran dibuka, tanggal pengumuman, dan bank pertanyaan wawancara.",
+    intro:
+      "Mengatur kapan pendaftaran dibuka, tanggal pengumuman, batas pemilihan jadwal wawancara, pengecualian login SSO, dan bank pertanyaan wawancara.",
     steps: [
       { title: "Buka/tutup pendaftaran", detail: "Gunakan sakelar OPREC untuk membuka atau menutup pendaftaran saat itu juga." },
       {
@@ -173,9 +175,30 @@ const SECTIONS: GuideSection[] = [
           "Isi tanggal & jam batas. Setelah lewat, calon anggota tidak bisa lagi memilih, mengganti, atau membatalkan jadwal; jadwal yang sudah dipilih tetap berlaku dan masih bisa di-Accept. Kosongkan untuk tanpa batas.",
       },
       {
+        title: "Pengecualian login SSO",
+        detail:
+          "Calon anggota wajib login dengan email @student.uns.ac.id. Bila akun SSO seseorang bermasalah, tambahkan email penggantinya (mis. Gmail) di kartu “Pengecualian Login SSO”. Ia lalu login lewat tautan “Masuk dengan akun email biasa” di website; email lain tetap ditolak. Verifikasi NIM-nya secara manual.",
+      },
+      {
         title: "Kelola bank pertanyaan",
         detail: "Tambah, ubah, atau hapus pertanyaan per divisi (General, Werkudara, Cakrawala, non-teknis). Butuh izin Kelola pertanyaan wawancara.",
       },
+    ],
+    statuses: [
+      {
+        group: "Status email di Pengecualian Login SSO",
+        items: [
+          { label: "Belum pernah login", tone: "neutral", meaning: "Email sudah diizinkan, tetapi pemiliknya belum mencoba login di website." },
+          { label: "Sudah login, belum mengisi formulir", tone: "warn", meaning: "Berhasil login dengan email ini, tetapi belum mulai mengisi formulir pendaftaran." },
+          { label: "Sudah mendaftar: nama", tone: "ok", meaning: "Sudah mengisi formulir dengan email ini. Cocokkan nama & NIM-nya dengan catatan." },
+        ],
+      },
+    ],
+    tips: [
+      "Perpanjangan oprec: biarkan pendaftaran tutup sesuai jadwal, lalu isi tanggal buka & tutup yang baru. Data formulir yang masih draft tetap tersimpan dan bisa dilanjutkan saat dibuka lagi.",
+      "Selama jeda (tanggal buka di masa depan), website otomatis menampilkan “Pendaftaran akan dibuka pada …”. Ubah tanggal buka hanya setelah pendaftaran tutup, karena mengisinya dengan tanggal mendatang langsung menutup pendaftaran.",
+      "Setiap kali memperpanjang oprec, undur juga Batas Pemilihan Jadwal Wawancara (±2–3 hari setelah tutup) dan minta pewawancara menambah slot kalender.",
+      "Pengecualian login SSO hanya untuk yang akun SSO-nya benar-benar bermasalah. Cabut emailnya bila sudah tidak diperlukan.",
     ],
   },
   {
@@ -242,7 +265,7 @@ const SECTIONS: GuideSection[] = [
           { label: "Bisa", tone: "mine", meaning: "Anda bisa, tetapi belum berpasangan. Tersimpan, tetapi belum bisa dipesan." },
           { label: "Pasangan bisa", tone: "partner", meaning: "Hanya pasangan yang bisa. Klik slot ini bila Anda juga bisa agar menjadi Cocok." },
           { label: "Tidak bisa", tone: "off", meaning: "Slot kosong, tidak ada yang mengisi." },
-          { label: "Lewat", tone: "past", meaning: "Waktunya sudah lewat, tidak bisa diubah." },
+          { label: "Lewat", tone: "past", meaning: "Waktunya sudah lewat, tidak bisa diubah. Terkunci otomatis walau halaman dibiarkan terbuka; slot yang lewat sebelum disimpan tidak ikut tersimpan (muncul pesannya)." },
           { label: "🔒 Nama calon", tone: "booked", meaning: "Sudah dipesan calon anggota. Terkunci dan tidak ikut terhapus saat kalender diubah." },
         ],
       },
@@ -318,7 +341,8 @@ const SECTIONS: GuideSection[] = [
           <>
             Centang kotak di kiri sesi, atau klik <strong>Simpan &amp; Tandai Selesai</strong> di lembar wawancara.
             Label menjadi <strong>Selesai</strong>, baris berwarna hijau, jam selesai tercatat, dan progres “x/y
-            selesai” bertambah.
+            selesai” bertambah. Bila wawancara dilakukan lebih awal dari jadwal, tetap bisa dicentang (muncul
+            konfirmasi “jam sesi belum tiba”).
           </>
         ),
       },
@@ -391,6 +415,32 @@ const SECTIONS: GuideSection[] = [
     tips: [
       "Badge hilang setelah calon anggota membuka lonceng.",
       "Lonceng memeriksa pengumuman baru secara otomatis tiap menit dan saat tab website dibuka kembali.",
+    ],
+  },
+  {
+    id: "statistik",
+    title: "Statistik Pendaftar",
+    icon: BarChart3,
+    href: "/dashboard/statistik",
+    requires: "Lihat pendaftar",
+    intro: "Ringkasan jumlah pendaftar dan sebaran divisi pilihan 1 & 2 dalam bentuk chart.",
+    steps: [
+      {
+        title: "Baca angka ringkasan",
+        detail: "Empat kotak teratas: sudah kirim formulir, masih draft, sudah pilih jadwal, dan wawancara selesai.",
+      },
+      {
+        title: "Pilih cakupan data",
+        detail: "“Sudah kirim” hanya menghitung yang sudah mengirim formulir; “Semua, termasuk draft” ikut menghitung yang masih mengisi.",
+      },
+      {
+        title: "Baca chart bulat & rincian divisi",
+        detail: "Chart bulat menunjukkan porsi Werkudara, Cakrawala, dan Non-teknis. Arahkan kursor (atau ketuk di HP) ke potongan/legenda untuk melihat angkanya; daftar di bawahnya merinci tiap divisi beserta jumlah & persentase.",
+      },
+    ],
+    tips: [
+      "Persentase dihitung dari jumlah orang yang memilih di kartu itu, jadi Pilihan 1 dan Pilihan 2 bisa berbeda totalnya.",
+      "Gunakan “Semua, termasuk draft” untuk melihat minat sebenarnya selama oprec masih berjalan; “Sudah kirim” untuk data final.",
     ],
   },
   {
