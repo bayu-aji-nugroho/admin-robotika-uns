@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { SidebarHeader } from "@/components/molecules/SidebarHeader";
 import { NavSection } from "@/components/molecules/NavSection";
 import { NavItem } from "@/components/atoms/NavItem";
-import { Sliders, Users, BarChart3, ShieldCheck, CalendarClock, BookOpen, Bell } from "lucide-react";
+import { Sliders, Users, BarChart3, ShieldCheck, CalendarClock, BookOpen, Bell, Eye } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useLocalStorageValue } from "@/utils/useLocalStorageValue";
@@ -16,6 +16,8 @@ interface UserProfile {
   divisionRole: string;
   avatarUrl?: string;
   isSuperadmin?: boolean;
+  /** Role Viewer: hanya lihat */
+  isViewer?: boolean;
 }
 
 interface DashboardSidebarProps {
@@ -104,7 +106,7 @@ export function DashboardSidebar({
         if (user && user.email) {
           const { data: whitelistData } = await supabase
             .from("admin_whitelist")
-            .select("full_name, role_oprec, role_division, is_superadmin")
+            .select("full_name, role_oprec, role_division, is_superadmin, admin_roles(permissions)")
             .eq("email", user.email.toLowerCase())
             .maybeSingle();
 
@@ -120,6 +122,13 @@ export function DashboardSidebar({
             avatarUrl:
               user.user_metadata?.avatar_url || user.user_metadata?.picture,
             isSuperadmin: Boolean(whitelistData?.is_superadmin),
+            isViewer:
+              !whitelistData?.is_superadmin &&
+              Boolean(
+                (whitelistData?.admin_roles as unknown as { permissions?: string[] } | null)?.permissions?.includes(
+                  "viewer.readonly"
+                )
+              ),
           });
         }
       } catch {
@@ -163,6 +172,24 @@ export function DashboardSidebar({
         isLoggingOut={isLoggingOut}
         onToggleCollapse={onToggleCollapse}
       />
+
+      {/* Penanda role Viewer (hanya lihat) */}
+      {profile.isViewer && (
+        <div
+          title="Role Viewer: Anda dapat melihat semua data tetapi tidak dapat mengubah apa pun."
+          className={`mx-3 mt-3 rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 ${
+            isCollapsed ? "px-1 py-1.5 text-center text-[9px] font-bold" : "px-3 py-2 text-[11px] font-semibold"
+          }`}
+        >
+          {isCollapsed ? (
+            <Eye className="w-4 h-4 mx-auto" />
+          ) : (
+            <span className="flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 shrink-0" /> Mode Viewer · hanya lihat
+            </span>
+          )}
+        </div>
+      )}
 
       {/* 2. Scrollable Menu Sections (Bebas dari horizontal scrollbar) */}
       <div

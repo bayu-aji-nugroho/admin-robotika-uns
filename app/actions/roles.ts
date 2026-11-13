@@ -71,6 +71,10 @@ function cleanPermissions(input: string[] | undefined): AdminPermission[] | null
   if (list.some((p) => !isAdminPermission(p))) {
     return null;
   }
+  // Viewer bersifat eksklusif: tidak bisa digabung dengan hak akses lain
+  if (list.includes("viewer.readonly") && list.length > 1) {
+    return null;
+  }
   return list as AdminPermission[];
 }
 

@@ -17,6 +17,7 @@ interface OprecSettingsCardProps {
   initialAnnouncementAt?: string | null;
   initialOpenAt?: string | null;
   initialCloseAt?: string | null;
+  initialInterviewDeadline?: string | null;
   updatedAt?: string;
   canEdit?: boolean;
 }
@@ -27,6 +28,7 @@ export function OprecSettingsCard({
   initialAnnouncementAt = null,
   initialOpenAt = null,
   initialCloseAt = null,
+  initialInterviewDeadline = null,
   updatedAt,
   canEdit = true,
 }: OprecSettingsCardProps) {
@@ -36,6 +38,7 @@ export function OprecSettingsCard({
   const [announcement, setAnnouncement] = useState<string>(toJakartaInputValue(initialAnnouncementAt));
   const [openAt, setOpenAt] = useState<string>(toJakartaInputValue(initialOpenAt));
   const [closeAt, setCloseAt] = useState<string>(toJakartaInputValue(initialCloseAt));
+  const [interviewDeadline, setInterviewDeadline] = useState<string>(toJakartaInputValue(initialInterviewDeadline));
 
   const [savedIsOprec, setSavedIsOprec] = useState<boolean>(initialIsOprec);
   const [savedLabel, setSavedLabel] = useState<string>(initialLabel);
@@ -44,6 +47,9 @@ export function OprecSettingsCard({
   );
   const [savedOpenAt, setSavedOpenAt] = useState<string>(toJakartaInputValue(initialOpenAt));
   const [savedCloseAt, setSavedCloseAt] = useState<string>(toJakartaInputValue(initialCloseAt));
+  const [savedInterviewDeadline, setSavedInterviewDeadline] = useState<string>(
+    toJakartaInputValue(initialInterviewDeadline)
+  );
 
   // Bila salah satu tanggal diisi, status buka/tutup diatur otomatis oleh database
   const isScheduled = Boolean(openAt || closeAt);
@@ -60,7 +66,8 @@ export function OprecSettingsCard({
     label !== savedLabel ||
     announcement !== savedAnnouncement ||
     openAt !== savedOpenAt ||
-    closeAt !== savedCloseAt;
+    closeAt !== savedCloseAt ||
+    interviewDeadline !== savedInterviewDeadline;
 
   const handleReset = () => {
     setIsOprec(savedIsOprec);
@@ -68,6 +75,7 @@ export function OprecSettingsCard({
     setAnnouncement(savedAnnouncement);
     setOpenAt(savedOpenAt);
     setCloseAt(savedCloseAt);
+    setInterviewDeadline(savedInterviewDeadline);
     setStatusMessage(null);
   };
 
@@ -109,6 +117,13 @@ export function OprecSettingsCard({
         return;
       }
 
+      const interviewDeadlineIso = interviewDeadline ? fromJakartaInputValue(interviewDeadline) : null;
+      if (interviewDeadline && !interviewDeadlineIso) {
+        setStatusMessage({ type: "error", text: "Format batas pemilihan jadwal wawancara tidak valid." });
+        setIsSaving(false);
+        return;
+      }
+
       const supabase = createClient();
       const now = new Date().toISOString();
 
@@ -121,6 +136,7 @@ export function OprecSettingsCard({
           announcement_at: announcementAt,
           oprec_open_at: openAtIso,
           oprec_close_at: closeAtIso,
+          interview_booking_deadline: interviewDeadlineIso,
           updated_at: now,
         })
         .eq("id", 1)
@@ -138,6 +154,7 @@ export function OprecSettingsCard({
       setSavedAnnouncement(announcement);
       setSavedOpenAt(openAt);
       setSavedCloseAt(closeAt);
+      setSavedInterviewDeadline(interviewDeadline);
       setLabel(trimmedLabel);
       setLastUpdated(now);
       setStatusMessage({
@@ -334,6 +351,44 @@ export function OprecSettingsCard({
                   fromJakartaInputValue(announcement)!
                 )}. Sebelum itu tampil info tanggal pengumuman.`
               : "Belum ditentukan: hasil seleksi disembunyikan dari calon anggota sampai tanggal diisi."}
+          </p>
+        </div>
+
+        {/* Row 3b: Batas Pemilihan Jadwal Wawancara */}
+        <div className="space-y-1.5">
+          <label
+            htmlFor="oprec-interview-deadline-input"
+            className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#18181b] dark:text-zinc-200"
+          >
+            <CalendarClock className="w-4 h-4 text-[#B22234] dark:text-rose-400" />
+            Batas Pemilihan Jadwal Wawancara
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id="oprec-interview-deadline-input"
+              type="datetime-local"
+              value={interviewDeadline}
+              onChange={(e) => setInterviewDeadline(e.target.value)}
+              disabled={!canEdit}
+              className="flex-1 px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-[#E4E4E7] dark:border-zinc-700/80 rounded-lg text-xs sm:text-sm text-[#18181b] dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors"
+            />
+            {interviewDeadline && canEdit && (
+              <button
+                type="button"
+                onClick={() => setInterviewDeadline("")}
+                title="Kosongkan batas pemilihan jadwal"
+                className="p-2 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            {interviewDeadline && fromJakartaInputValue(interviewDeadline)
+              ? `Calon anggota bisa memilih, mengganti, atau membatalkan jadwal sampai ${formatJakartaDateTime(
+                  fromJakartaInputValue(interviewDeadline)!
+                )}. Setelah itu pemilihan ditutup; jadwal yang sudah dipilih tetap berlaku dan masih bisa di-Accept.`
+              : "Tanpa batas: calon anggota bisa memilih jadwal selama masih ada slot kosong."}
           </p>
         </div>
 

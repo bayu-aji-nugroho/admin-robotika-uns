@@ -50,18 +50,29 @@ function PermissionChecklist({
   onChange: (next: AdminPermission[]) => void;
   disabled?: boolean;
 }) {
+  const isViewer = value.includes("viewer.readonly");
+  // Viewer eksklusif: memilih Viewer menghapus hak lain, memilih hak lain menghapus Viewer
   const toggle = (key: AdminPermission) => {
-    onChange(value.includes(key) ? value.filter((k) => k !== key) : [...value, key]);
+    if (value.includes(key)) {
+      onChange(value.filter((k) => k !== key));
+    } else if (key === "viewer.readonly") {
+      onChange(["viewer.readonly"]);
+    } else {
+      onChange([...value.filter((k) => k !== "viewer.readonly"), key]);
+    }
   };
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
       {ADMIN_PERMISSIONS.map((perm) => {
         const checked = value.includes(perm.key);
+        const dimmed = isViewer && perm.key !== "viewer.readonly";
         return (
           <label
             key={perm.key}
             className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition-colors ${
+              perm.key === "viewer.readonly" ? "sm:col-span-2" : ""
+            } ${dimmed ? "opacity-50" : ""} ${
               checked
                 ? "border-[#B22234]/60 bg-[#FCF2F3] dark:bg-rose-950/20 dark:border-rose-900/60"
                 : "border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/40"

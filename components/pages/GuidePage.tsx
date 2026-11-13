@@ -168,6 +168,11 @@ const SECTIONS: GuideSection[] = [
         detail: "Hasil seleksi baru terlihat oleh calon anggota setelah tanggal ini.",
       },
       {
+        title: "Batas pemilihan jadwal wawancara",
+        detail:
+          "Isi tanggal & jam batas. Setelah lewat, calon anggota tidak bisa lagi memilih, mengganti, atau membatalkan jadwal; jadwal yang sudah dipilih tetap berlaku dan masih bisa di-Accept. Kosongkan untuk tanpa batas.",
+      },
+      {
         title: "Kelola bank pertanyaan",
         detail: "Tambah, ubah, atau hapus pertanyaan per divisi (General, Werkudara, Cakrawala, non-teknis). Butuh izin Kelola pertanyaan wawancara.",
       },
@@ -415,6 +420,11 @@ const SECTIONS: GuideSection[] = [
 
 /** Contoh susunan role yang umum dipakai */
 const ROLE_EXAMPLES: { name: string; permissions: AdminPermission[]; note: string }[] = [
+  {
+    name: "Viewer",
+    permissions: ["viewer.readonly", "applicants.view"],
+    note: "Melihat semua menu & data (termasuk pendaftar) tanpa bisa mengubah apa pun.",
+  },
   {
     name: "Pewawancara",
     permissions: ["interview.schedule"],
@@ -669,7 +679,7 @@ export function GuidePage({ viewer }: GuidePageProps) {
                   </td>
                   {ADMIN_PERMISSIONS.map((p) => (
                     <td key={p.key} className="p-2">
-                      <PermissionMark on />
+                      <PermissionMark on={p.key !== "viewer.readonly"} />
                     </td>
                   ))}
                 </tr>

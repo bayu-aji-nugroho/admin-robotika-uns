@@ -16,6 +16,7 @@ interface OprecSettingsPageProps {
     announcement_at?: string | null;
     oprec_open_at?: string | null;
     oprec_close_at?: string | null;
+    interview_booking_deadline?: string | null;
     updated_at?: string;
   };
   initialQuestions?: InterviewQuestionItem[];
@@ -43,6 +44,7 @@ export function OprecSettingsPage({
           initialAnnouncementAt={initialSettings.announcement_at ?? null}
           initialOpenAt={initialSettings.oprec_open_at ?? null}
           initialCloseAt={initialSettings.oprec_close_at ?? null}
+          initialInterviewDeadline={initialSettings.interview_booking_deadline ?? null}
           updatedAt={initialSettings.updated_at}
           canEdit={canEditSettings}
         />

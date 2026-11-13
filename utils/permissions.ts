@@ -1,6 +1,14 @@
 // Daftar hak akses yang bisa diberikan ke custom role.
 // Harus sama dengan constraint admin_roles_permissions_known di database.
+export const VIEWER_PERMISSION = "viewer.readonly" as const;
+
 export const ADMIN_PERMISSIONS = [
+  {
+    key: "viewer.readonly",
+    label: "Viewer (hanya lihat)",
+    description:
+      "Bisa membuka semua menu dan melihat semua data, tetapi tidak dapat mengubah apa pun. Tidak bisa digabung dengan hak akses lain.",
+  },
   {
     key: "applicants.view",
     label: "Lihat pendaftar",

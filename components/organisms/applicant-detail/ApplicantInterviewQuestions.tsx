@@ -15,6 +15,8 @@ interface ApplicantInterviewQuestionsProps {
   onSaveInterviewAnswers: () => void;
   isSavingAnswers: boolean;
   answersSaveSuccess: boolean;
+  /** Hanya lihat (mis. role Viewer / tanpa hak Nilai pendaftar) */
+  readOnly?: boolean;
 }
 
 interface QuestionGroupProps {
@@ -24,6 +26,7 @@ interface QuestionGroupProps {
   questions: InterviewQuestionItem[];
   interviewAnswers: Record<string, string>;
   setInterviewAnswers: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  readOnly?: boolean;
 }
 
 function QuestionGroup({
@@ -33,6 +36,7 @@ function QuestionGroup({
   questions,
   interviewAnswers,
   setInterviewAnswers,
+  readOnly = false,
 }: QuestionGroupProps) {
   if (questions.length === 0) return null;
 
@@ -80,7 +84,8 @@ function QuestionGroup({
                       [q.id]: val,
                     }));
                   }}
-                  placeholder="Catatan jawaban wawancara..."
+                  placeholder={readOnly ? "Belum ada catatan." : "Catatan jawaban wawancara..."}
+                  readOnly={readOnly}
                   className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-md text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] transition-colors resize-y min-h-[34px]"
                 />
               </div>
@@ -100,6 +105,7 @@ export function ApplicantInterviewQuestions({
   onSaveInterviewAnswers,
   isSavingAnswers,
   answersSaveSuccess,
+  readOnly = false,
 }: ApplicantInterviewQuestionsProps) {
   // State toggle accordion per section pertanyaan (Default: tertutup / false)
   const [expandedSections, setExpandedSections] = useState({
@@ -168,6 +174,7 @@ export function ApplicantInterviewQuestions({
             )}
             <span>Unduh PDF</span>
           </button>
+          {!readOnly && (
           <button
             type="button"
             onClick={onSaveInterviewAnswers}
@@ -183,6 +190,7 @@ export function ApplicantInterviewQuestions({
             )}
             <span>{answersSaveSuccess ? "Catatan Tersimpan" : "Simpan Catatan"}</span>
           </button>
+          )}
         </div>
       </div>
 
@@ -211,6 +219,7 @@ export function ApplicantInterviewQuestions({
             questions={generalQuestions}
             interviewAnswers={interviewAnswers}
             setInterviewAnswers={setInterviewAnswers}
+            readOnly={readOnly}
           />
 
           {/* 2. Primary Division Questions */}
@@ -221,6 +230,7 @@ export function ApplicantInterviewQuestions({
             questions={primaryDivisionQuestions}
             interviewAnswers={interviewAnswers}
             setInterviewAnswers={setInterviewAnswers}
+            readOnly={readOnly}
           />
 
           {/* 3. Secondary Division Questions */}
@@ -231,6 +241,7 @@ export function ApplicantInterviewQuestions({
             questions={secondaryDivisionQuestions}
             interviewAnswers={interviewAnswers}
             setInterviewAnswers={setInterviewAnswers}
+            readOnly={readOnly}
           />
         </div>
       )}
@@ -250,7 +261,8 @@ export function ApplicantInterviewQuestions({
               _notes: val,
             }));
           }}
-          placeholder="Tuliskan catatan khusus hasil wawancara di sini..."
+          placeholder={readOnly ? "Belum ada catatan khusus." : "Tuliskan catatan khusus hasil wawancara di sini..."}
+          readOnly={readOnly}
           className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] transition-colors resize-y min-h-[64px]"
         />
       </div>

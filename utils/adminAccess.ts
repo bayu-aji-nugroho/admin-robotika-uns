@@ -9,6 +9,8 @@ export interface AdminAccess {
   roleDivision: string | null;
   roleId: string | null;
   isSuperadmin: boolean;
+  /** Role Viewer: hanya lihat, tanpa hak mengubah apa pun */
+  isViewer: boolean;
   permissions: AdminPermission[];
 }
 
@@ -37,6 +39,9 @@ export async function getAdminAccess(
   const isSuperadmin = Boolean(data.is_superadmin);
   const role = data.admin_roles as unknown as { permissions?: string[] } | null;
   const rolePermissions = (role?.permissions || []) as AdminPermission[];
+  // Viewer otomatis mendapat akses baca pendaftar (sama dengan has_admin_permission di database)
+  const isViewer = !isSuperadmin && rolePermissions.includes("viewer.readonly");
+  const effective: AdminPermission[] = isViewer ? ["viewer.readonly", "applicants.view"] : rolePermissions;
 
   return {
     id: data.id,
@@ -46,9 +51,10 @@ export async function getAdminAccess(
     roleDivision: data.role_division,
     roleId: data.role_id,
     isSuperadmin,
+    isViewer,
     permissions: isSuperadmin
-      ? [...ADMIN_PERMISSION_KEYS]
-      : ADMIN_PERMISSION_KEYS.filter((key) => rolePermissions.includes(key)),
+      ? ADMIN_PERMISSION_KEYS.filter((key) => key !== "viewer.readonly")
+      : ADMIN_PERMISSION_KEYS.filter((key) => effective.includes(key)),
   };
 }
 

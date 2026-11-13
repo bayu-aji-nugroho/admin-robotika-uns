@@ -263,6 +263,7 @@ export function ApplicantDetailCard({
         onSaveInterviewAnswers={() => handleSaveInterviewAnswers()}
         isSavingAnswers={isSavingAnswers}
         answersSaveSuccess={answersSaveSuccess}
+        readOnly={!canAssess}
       />
 
       {/* 6. Presensi / Absensi (UI Saja) */}
