@@ -137,7 +137,8 @@ const SECTIONS: GuideSection[] = [
       { title: "Periksa berkas", detail: "Buka CV (link berlaku 2 jam) dan link twibbon/portofolio." },
       {
         title: "Isi catatan wawancara",
-        detail: "Pertanyaan otomatis menyesuaikan divisi pilihan 1 & 2. Tulis jawaban lalu klik Simpan Catatan.",
+        detail:
+          "Pertanyaan otomatis menyesuaikan divisi pilihan 1 & 2. Saat lembar pertama kali dibuka, sistem mengacak 5 soal General, 5 soal Pilihan 1, dan 5 soal Pilihan 2, lalu menguncinya (semua pewawancara & PDF melihat soal yang sama). Soal sisanya ada di dropdown “Pertanyaan lain” dan tetap bisa diisi. Tulis jawaban lalu klik Simpan Catatan.",
       },
       {
         title: "Beri keputusan",

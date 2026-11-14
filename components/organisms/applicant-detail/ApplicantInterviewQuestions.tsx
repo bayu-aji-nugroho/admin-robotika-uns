@@ -5,7 +5,8 @@ import { MessageSquare, Loader2, Check, Save, ChevronDown, ChevronRight, FileDow
 import { downloadFromApi } from "@/utils/downloadFile";
 import { ApplicantDetailData } from "./types";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
-import { groupInterviewQuestions } from "@/utils/interviewQuestionGroups";
+import { groupInterviewQuestions, splitByPicks } from "@/utils/interviewQuestionGroups";
+import { useQuestionPicks } from "@/utils/useQuestionPicks";
 
 interface ApplicantInterviewQuestionsProps {
   applicant: ApplicantDetailData;
@@ -23,7 +24,10 @@ interface QuestionGroupProps {
   title: string;
   isExpanded: boolean;
   onToggle: () => void;
+  /** Soal terpilih (5 acak) yang ditampilkan */
   questions: InterviewQuestionItem[];
+  /** Soal lain di bagian ini, disembunyikan dalam dropdown */
+  hiddenQuestions?: InterviewQuestionItem[];
   interviewAnswers: Record<string, string>;
   setInterviewAnswers: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   readOnly?: boolean;
@@ -34,11 +38,41 @@ function QuestionGroup({
   isExpanded,
   onToggle,
   questions,
+  hiddenQuestions = [],
   interviewAnswers,
   setInterviewAnswers,
   readOnly = false,
 }: QuestionGroupProps) {
   if (questions.length === 0) return null;
+  const hiddenAnswered = hiddenQuestions.filter((q) => (interviewAnswers[q.id] || "").trim()).length;
+
+  const renderQuestion = (q: InterviewQuestionItem) => (
+    <div
+      key={q.id}
+      className="p-3 sm:p-3.5 space-y-2 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30 transition-colors"
+    >
+      <p className="text-xs sm:text-sm leading-relaxed text-zinc-800 dark:text-zinc-100 font-medium">
+        {q.question}
+      </p>
+
+      <div>
+        <textarea
+          rows={1}
+          value={interviewAnswers[q.id] || ""}
+          onChange={(e) => {
+            const val = e.target.value;
+            setInterviewAnswers((prev) => ({
+              ...prev,
+              [q.id]: val,
+            }));
+          }}
+          placeholder={readOnly ? "Belum ada catatan." : "Catatan jawaban wawancara..."}
+          readOnly={readOnly}
+          className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-md text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] transition-colors resize-y min-h-[34px]"
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-2">
@@ -63,34 +97,24 @@ function QuestionGroup({
       </button>
 
       {isExpanded && (
-        <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-950">
-          {questions.map((q) => (
-            <div
-              key={q.id}
-              className="p-3 sm:p-3.5 space-y-2 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/30 transition-colors"
-            >
-              <p className="text-xs sm:text-sm leading-relaxed text-zinc-800 dark:text-zinc-100 font-medium">
-                {q.question}
-              </p>
-
-              <div>
-                <textarea
-                  rows={1}
-                  value={interviewAnswers[q.id] || ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setInterviewAnswers((prev) => ({
-                      ...prev,
-                      [q.id]: val,
-                    }));
-                  }}
-                  placeholder={readOnly ? "Belum ada catatan." : "Catatan jawaban wawancara..."}
-                  readOnly={readOnly}
-                  className="w-full px-3 py-1.5 bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-md text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-hidden focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] transition-colors resize-y min-h-[34px]"
-                />
+        <div className="space-y-2">
+          <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-950">
+            {questions.map(renderQuestion)}
+          </div>
+          {hiddenQuestions.length > 0 && (
+            <details className="group rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700">
+              <summary className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-300 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
+                Pertanyaan lain ({hiddenQuestions.length})
+                {hiddenAnswered > 0 && (
+                  <span className="font-normal text-emerald-700 dark:text-emerald-400">· {hiddenAnswered} terjawab</span>
+                )}
+              </summary>
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-b-lg overflow-hidden">
+                {hiddenQuestions.map(renderQuestion)}
               </div>
-            </div>
-          ))}
+            </details>
+          )}
         </div>
       )}
     </div>
@@ -135,16 +159,14 @@ export function ApplicantInterviewQuestions({
   };
 
   // General, Divisi Pilihan 1, dan Divisi Pilihan 2 (sama dengan isi lembar wawancara PDF)
-  const {
-    general: generalQuestions,
-    primary: primaryDivisionQuestions,
-    secondary: secondaryDivisionQuestions,
-  } = groupInterviewQuestions(interviewQuestions, applicant);
+  const groups = groupInterviewQuestions(interviewQuestions, applicant);
+  // 5 soal acak per bagian, dikunci saat pertama kali dibuka; sisanya di dropdown "Pertanyaan lain"
+  const { picks } = useQuestionPicks(applicant.id, groups, interviewAnswers);
+  const general = splitByPicks(groups.general, picks);
+  const primary = splitByPicks(groups.primary, picks);
+  const secondary = splitByPicks(groups.secondary, picks);
 
-  const totalQuestionsCount =
-    generalQuestions.length +
-    primaryDivisionQuestions.length +
-    secondaryDivisionQuestions.length;
+  const totalQuestionsCount = general.shown.length + primary.shown.length + secondary.shown.length;
 
   return (
     <div className="bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 rounded-xl p-5 shadow-xs space-y-4">
@@ -216,7 +238,8 @@ export function ApplicantInterviewQuestions({
             title="Pertanyaan Umum (General)"
             isExpanded={expandedSections.general}
             onToggle={() => toggleSection("general")}
-            questions={generalQuestions}
+            questions={general.shown}
+            hiddenQuestions={general.hidden}
             interviewAnswers={interviewAnswers}
             setInterviewAnswers={setInterviewAnswers}
             readOnly={readOnly}
@@ -227,7 +250,8 @@ export function ApplicantInterviewQuestions({
             title={`Pertanyaan Divisi Pilihan 1: ${applicant.primary_division_name || "Divisi Utama"}`}
             isExpanded={expandedSections.primary}
             onToggle={() => toggleSection("primary")}
-            questions={primaryDivisionQuestions}
+            questions={primary.shown}
+            hiddenQuestions={primary.hidden}
             interviewAnswers={interviewAnswers}
             setInterviewAnswers={setInterviewAnswers}
             readOnly={readOnly}
@@ -238,7 +262,8 @@ export function ApplicantInterviewQuestions({
             title={`Pertanyaan Divisi Pilihan 2: ${applicant.secondary_division_name || "Divisi Kedua"}`}
             isExpanded={expandedSections.secondary}
             onToggle={() => toggleSection("secondary")}
-            questions={secondaryDivisionQuestions}
+            questions={secondary.shown}
+            hiddenQuestions={secondary.hidden}
             interviewAnswers={interviewAnswers}
             setInterviewAnswers={setInterviewAnswers}
             readOnly={readOnly}

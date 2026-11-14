@@ -8,6 +8,7 @@ import {
   GroupableQuestion,
   INTERVIEW_NOTES_KEY,
   groupInterviewQuestions,
+  splitByPicks,
 } from "@/utils/interviewQuestionGroups";
 
 // Lembar hasil wawancara (pertanyaan + jawaban), 1 bagian per calon anggota.
@@ -86,7 +87,9 @@ function drawApplicant(
   applicant: ApplicantRow,
   questions: GroupableQuestion[],
   booking: BookingRow | undefined,
-  adminNames: Map<string, string>
+  adminNames: Map<string, string>,
+  /** Soal terpilih calon anggota ini (null = belum diacak, tampilkan semua) */
+  picks: string[] | null
 ) {
   const answers = applicant.interview_answers || {};
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -144,10 +147,15 @@ function drawApplicant(
 
   // Pertanyaan + jawaban per kelompok
   const groups = groupInterviewQuestions(questions, applicant);
+  // Soal terpilih (5 acak per bagian) + soal lain yang ikut dijawab
+  const pickedItems = (items: GroupableQuestion[]) => {
+    const { shown, hidden } = splitByPicks(items, picks);
+    return [...shown, ...hidden.filter((q) => (answers[q.id] || "").trim())];
+  };
   const sections: { title: string; items: GroupableQuestion[] }[] = [
-    { title: "Pertanyaan Umum", items: groups.general },
-    { title: `Divisi Pilihan 1: ${applicant.primary_division_name || "-"}`, items: groups.primary },
-    { title: `Divisi Pilihan 2: ${applicant.secondary_division_name || "-"}`, items: groups.secondary },
+    { title: "Pertanyaan Umum", items: pickedItems(groups.general) },
+    { title: `Divisi Pilihan 1: ${applicant.primary_division_name || "-"}`, items: pickedItems(groups.primary) },
+    { title: `Divisi Pilihan 2: ${applicant.secondary_division_name || "-"}`, items: pickedItems(groups.secondary) },
   ].filter((s) => s.items.length > 0);
 
   if (sections.length === 0) {
@@ -231,7 +239,7 @@ export async function GET(request: Request) {
     applicantQuery = applicantQuery.eq("id", applicantId);
   }
 
-  const [applicantsResult, questionsResult, bookingsResult, adminsResult, divisionsResult] = await Promise.all([
+  const [applicantsResult, questionsResult, bookingsResult, adminsResult, divisionsResult, picksResult] = await Promise.all([
     applicantQuery,
     supabase
       .from("interview_questions")
@@ -241,6 +249,7 @@ export async function GET(request: Request) {
     supabase.from("interview_bookings").select("applicant_id, start_at, status, location, interviewer_ids"),
     supabase.from("admin_whitelist").select("id, full_name, email"),
     supabase.from("divisions").select("id, name"),
+    supabase.from("interview_question_picks").select("applicant_id, question_ids"),
   ]);
 
   if (applicantsResult.error) {
@@ -275,6 +284,12 @@ export async function GET(request: Request) {
 
   const questions = (questionsResult.data as GroupableQuestion[]) || [];
   const bookings = new Map(((bookingsResult.data as BookingRow[]) || []).map((b) => [b.applicant_id, b]));
+  const picksByApplicant = new Map(
+    ((picksResult.data as { applicant_id: string; question_ids: string[] }[]) || []).map((p) => [
+      p.applicant_id,
+      p.question_ids,
+    ])
+  );
   const adminNames = new Map(
     (adminsResult.data || []).map((a) => [a.id, a.full_name || a.email.split("@")[0]])
   );
@@ -289,7 +304,7 @@ export async function GET(request: Request) {
 
   applicants.forEach((applicant, idx) => {
     if (idx > 0) doc.addPage();
-    drawApplicant(doc, applicant, questions, bookings.get(applicant.id), adminNames);
+    drawApplicant(doc, applicant, questions, bookings.get(applicant.id), adminNames, picksByApplicant.get(applicant.id) ?? null);
   });
 
   // Footer semua halaman

@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ExternalLink, Loader2, Save } from "lucide-react";
+import { CheckCircle2, ChevronRight, ExternalLink, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 import { getInterviewSheetAction, saveInterviewAnswersAction } from "@/app/actions/interviewSchedule";
-import { INTERVIEW_NOTES_KEY, groupInterviewQuestions } from "@/utils/interviewQuestionGroups";
+import { INTERVIEW_NOTES_KEY, groupInterviewQuestions, splitByPicks } from "@/utils/interviewQuestionGroups";
+import { useQuestionPicks } from "@/utils/useQuestionPicks";
 import type { InterviewSheetData, SheetQuestion } from "@/utils/interviewSchedule.types";
 
 interface InterviewSheetPanelProps {
@@ -59,10 +60,16 @@ export function InterviewSheetPanel({
     };
   }, [applicantId]);
 
+  const { ready: picksReady, picks } = useQuestionPicks(
+    applicantId,
+    sheet ? groupInterviewQuestions(questions, sheet.applicant) : null,
+    sheet ? sheet.answers || {} : null
+  );
+
   if (loadError) {
     return <p className="text-xs text-rose-600 dark:text-rose-400">{loadError}</p>;
   }
-  if (!sheet) {
+  if (!sheet || !picksReady) {
     return (
       <p className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
         <Loader2 className="w-3.5 h-3.5 animate-spin" /> Memuat lembar wawancara...
@@ -73,12 +80,17 @@ export function InterviewSheetPanel({
   const { applicant, can_edit: canEdit } = sheet;
   const groups = groupInterviewQuestions(questions, applicant);
   const sections = [
-    { title: "Pertanyaan Umum (General)", items: groups.general },
-    { title: `Divisi Pilihan 1: ${applicant.primary_division_name || "-"}`, items: groups.primary },
-    { title: `Divisi Pilihan 2: ${applicant.secondary_division_name || "-"}`, items: groups.secondary },
-  ].filter((s) => s.items.length > 0);
-  const total = sections.reduce((n, s) => n + s.items.length, 0);
-  const answered = sections.reduce((n, s) => n + s.items.filter((q) => (answers[q.id] || "").trim()).length, 0);
+    { title: "Pertanyaan Umum (General)", ...splitByPicks(groups.general, picks) },
+    { title: `Divisi Pilihan 1: ${applicant.primary_division_name || "-"}`, ...splitByPicks(groups.primary, picks) },
+    { title: `Divisi Pilihan 2: ${applicant.secondary_division_name || "-"}`, ...splitByPicks(groups.secondary, picks) },
+  ].filter((s) => s.shown.length > 0);
+  const isAnswered = (q: SheetQuestion) => Boolean((answers[q.id] || "").trim());
+  // Progres dihitung dari soal terpilih (+ soal lain yang ikut dijawab)
+  const total = sections.reduce((n, s) => n + s.shown.length + s.hidden.filter(isAnswered).length, 0);
+  const answered = sections.reduce(
+    (n, s) => n + s.shown.filter(isAnswered).length + s.hidden.filter(isAnswered).length,
+    0
+  );
   const isDirty = JSON.stringify(answers) !== savedAnswers;
 
   const setAnswer = (key: string, value: string) => setAnswers((prev) => ({ ...prev, [key]: value }));
@@ -141,31 +153,49 @@ export function InterviewSheetPanel({
           Belum ada pertanyaan di Bank Pertanyaan untuk divisi pilihan calon anggota ini.
         </p>
       ) : (
-        sections.map((section) => (
-          <div key={section.title} className="space-y-1.5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-              {section.title}
-            </p>
-            <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-950">
-              {section.items.map((q, i) => (
-                <div key={q.id} className="p-2.5 space-y-1.5">
-                  <p className="text-xs leading-relaxed text-zinc-800 dark:text-zinc-100 font-medium">
-                    <span className="font-mono text-zinc-400 mr-1.5">{i + 1}.</span>
-                    {q.question}
-                  </p>
-                  <textarea
-                    rows={isPage ? 2 : 1}
-                    value={answers[q.id] || ""}
-                    onChange={(e) => setAnswer(q.id, e.target.value)}
-                    disabled={!canEdit || busy}
-                    placeholder="Catatan jawaban..."
-                    className={`${textareaClass} min-h-[34px]`}
-                  />
-                </div>
-              ))}
+        sections.map((section) => {
+          const renderQuestion = (q: SheetQuestion, n: number) => (
+            <div key={q.id} className="p-2.5 space-y-1.5">
+              <p className="text-xs leading-relaxed text-zinc-800 dark:text-zinc-100 font-medium">
+                <span className="font-mono text-zinc-400 mr-1.5">{n}.</span>
+                {q.question}
+              </p>
+              <textarea
+                rows={isPage ? 2 : 1}
+                value={answers[q.id] || ""}
+                onChange={(e) => setAnswer(q.id, e.target.value)}
+                disabled={!canEdit || busy}
+                placeholder="Catatan jawaban..."
+                className={`${textareaClass} min-h-[34px]`}
+              />
             </div>
-          </div>
-        ))
+          );
+          const hiddenAnswered = section.hidden.filter(isAnswered).length;
+          return (
+            <div key={section.title} className="space-y-1.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                {section.title}
+              </p>
+              <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 border border-zinc-200 dark:border-zinc-800 rounded-lg overflow-hidden bg-white dark:bg-zinc-950">
+                {section.shown.map((q, i) => renderQuestion(q, i + 1))}
+              </div>
+              {section.hidden.length > 0 && (
+                <details className="group rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700">
+                  <summary className="flex items-center gap-1.5 px-2.5 py-2 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                    <ChevronRight className="w-3.5 h-3.5 transition-transform group-open:rotate-90" />
+                    Pertanyaan lain ({section.hidden.length})
+                    {hiddenAnswered > 0 && (
+                      <span className="font-normal text-emerald-700 dark:text-emerald-400">· {hiddenAnswered} terjawab</span>
+                    )}
+                  </summary>
+                  <div className="divide-y divide-zinc-100 dark:divide-zinc-800/60 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 rounded-b-lg overflow-hidden">
+                    {section.hidden.map((q, i) => renderQuestion(q, section.shown.length + i + 1))}
+                  </div>
+                </details>
+              )}
+            </div>
+          );
+        })
       )}
 
       <label className="block space-y-1">

@@ -159,6 +159,28 @@ export async function getInterviewSheetAction(applicantId: string): Promise<Acti
   }
 }
 
+/**
+ * Ambil soal terpilih (5 per bagian) seorang calon anggota. Bila belum pernah diacak,
+ * `candidate` (hasil acak di browser) disimpan & dikunci. null = belum diacak (role hanya-lihat).
+ * Tidak memakai callRpc agar halaman tidak di-revalidate saat lembar dibuka.
+ */
+export async function ensureQuestionPicksAction(
+  applicantId: string,
+  candidate: string[]
+): Promise<ActionResult<string[] | null>> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("ensure_interview_question_picks", {
+      p_applicant: applicantId,
+      p_candidate: candidate.slice(0, 60),
+    });
+    if (error) return { success: false, error: error.message };
+    return { success: true, data: (data as string[] | null) || null };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Terjadi kesalahan." };
+  }
+}
+
 /** Simpan catatan jawaban wawancara (hanya interview_answers; status penilaian tidak berubah). */
 export async function saveInterviewAnswersAction(
   applicantId: string,
