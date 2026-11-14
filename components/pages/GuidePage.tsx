@@ -182,6 +182,11 @@ const SECTIONS: GuideSection[] = [
           "Isi tanggal & jam batas. Setelah lewat, calon anggota tidak bisa lagi memilih, mengganti, atau membatalkan jadwal; jadwal yang sudah dipilih tetap berlaku dan masih bisa di-Accept. Kosongkan untuk tanpa batas.",
       },
       {
+        title: "Warna notifikasi di landing page",
+        detail:
+          "Pilih warna notifikasi “Open Recruitment dibuka, silakan daftar!” yang muncul di bawah navbar website: klik salah satu warna siap pakai atau pilih warna sendiri, cek pratinjaunya, lalu Simpan. Warna teks (putih/hitam) menyesuaikan otomatis; “Pakai warna bawaan” mengembalikan ke hijau.",
+      },
+      {
         title: "Pengecualian login SSO",
         detail:
           "Calon anggota wajib login dengan email @student.uns.ac.id. Bila akun SSO seseorang bermasalah, tambahkan email penggantinya (mis. Gmail) di kartu “Pengecualian Login SSO”. Ia lalu login lewat tautan “Masuk dengan akun email biasa” di website; email lain tetap ditolak. Verifikasi NIM-nya secara manual.",

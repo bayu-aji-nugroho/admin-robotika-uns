@@ -5,6 +5,8 @@ import { ToggleSwitch } from "@/components/atoms/ToggleSwitch";
 import { Button } from "@/components/atoms/Button";
 import { CheckCircle2, AlertCircle, RotateCcw, Save, CalendarClock, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { OprecBannerColorField } from "@/components/organisms/OprecBannerColorField";
+import { isValidBannerColor } from "@/utils/bannerColor";
 import {
   formatJakartaDateTime,
   fromJakartaInputValue,
@@ -18,6 +20,8 @@ interface OprecSettingsCardProps {
   initialOpenAt?: string | null;
   initialCloseAt?: string | null;
   initialInterviewDeadline?: string | null;
+  /** Warna notifikasi landing page (null = bawaan) */
+  initialBannerColor?: string | null;
   updatedAt?: string;
   canEdit?: boolean;
 }
@@ -29,9 +33,12 @@ export function OprecSettingsCard({
   initialOpenAt = null,
   initialCloseAt = null,
   initialInterviewDeadline = null,
+  initialBannerColor = null,
   updatedAt,
   canEdit = true,
 }: OprecSettingsCardProps) {
+  const [bannerColor, setBannerColor] = useState<string>(initialBannerColor || "");
+  const [savedBannerColor, setSavedBannerColor] = useState<string>(initialBannerColor || "");
   const [isOprec, setIsOprec] = useState<boolean>(initialIsOprec);
   const [label, setLabel] = useState<string>(initialLabel);
   // Nilai input datetime-local dalam WIB, "" = belum ditentukan
@@ -67,9 +74,11 @@ export function OprecSettingsCard({
     announcement !== savedAnnouncement ||
     openAt !== savedOpenAt ||
     closeAt !== savedCloseAt ||
-    interviewDeadline !== savedInterviewDeadline;
+    interviewDeadline !== savedInterviewDeadline ||
+    bannerColor !== savedBannerColor;
 
   const handleReset = () => {
+    setBannerColor(savedBannerColor);
     setIsOprec(savedIsOprec);
     setLabel(savedLabel);
     setAnnouncement(savedAnnouncement);
@@ -137,6 +146,7 @@ export function OprecSettingsCard({
           oprec_open_at: openAtIso,
           oprec_close_at: closeAtIso,
           interview_booking_deadline: interviewDeadlineIso,
+          oprec_banner_color: isValidBannerColor(bannerColor) ? bannerColor.toLowerCase() : null,
           updated_at: now,
         })
         .eq("id", 1)
@@ -155,6 +165,7 @@ export function OprecSettingsCard({
       setSavedOpenAt(openAt);
       setSavedCloseAt(closeAt);
       setSavedInterviewDeadline(interviewDeadline);
+      setSavedBannerColor(bannerColor);
       setLabel(trimmedLabel);
       setLastUpdated(now);
       setStatusMessage({
@@ -391,6 +402,9 @@ export function OprecSettingsCard({
               : "Tanpa batas: calon anggota bisa memilih jadwal selama masih ada slot kosong."}
           </p>
         </div>
+
+        {/* Row 3c: Warna notifikasi "Open Recruitment dibuka" di landing page */}
+        <OprecBannerColorField value={bannerColor} onChange={setBannerColor} disabled={!canEdit} />
 
         {/* Row 4: Action Buttons */}
         <div className="pt-4 border-t border-[#E4E4E7] dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3">

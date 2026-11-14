@@ -21,6 +21,7 @@ interface OprecSettingsPageProps {
     oprec_open_at?: string | null;
     oprec_close_at?: string | null;
     interview_booking_deadline?: string | null;
+    oprec_banner_color?: string | null;
     updated_at?: string;
   };
   initialQuestions?: InterviewQuestionItem[];
@@ -52,6 +53,7 @@ export function OprecSettingsPage({
           initialOpenAt={initialSettings.oprec_open_at ?? null}
           initialCloseAt={initialSettings.oprec_close_at ?? null}
           initialInterviewDeadline={initialSettings.interview_booking_deadline ?? null}
+          initialBannerColor={initialSettings.oprec_banner_color ?? null}
           updatedAt={initialSettings.updated_at}
           canEdit={canEditSettings}
         />
