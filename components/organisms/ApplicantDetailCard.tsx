@@ -9,7 +9,6 @@ import {
   DivisionItem,
   ApplicantDetailCardProps,
   DecisionStatus,
-  AttendanceStatus,
 } from "./applicant-detail/types";
 import {
   ApplicantHeader,
@@ -17,7 +16,7 @@ import {
   ApplicantDivisionPreferences,
   ApplicantDocuments,
   ApplicantInterviewQuestions,
-  ApplicantAttendance,
+  ApplicantInterviewSchedule,
   ApplicantAssessmentAndDangerZone,
   ApplicantDeleteModal,
 } from "./applicant-detail";
@@ -27,15 +26,13 @@ export type { ApplicantDetailData, DivisionItem, ApplicantDetailCardProps };
 
 export function ApplicantDetailCard({
   applicant,
+  interview = null,
   divisions = [],
   interviewQuestions = [],
   canAssess = true,
   canDelete = true,
 }: ApplicantDetailCardProps) {
   const router = useRouter();
-
-  // 1. State UI Absensi (Mockup)
-  const [attendanceStatus, setAttendanceStatus] = useState<AttendanceStatus>("belum");
 
   // 2. State dialog konfirmasi hapus peserta permanen
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -254,7 +251,13 @@ export function ApplicantDetailCard({
       {/* 4. Berkas Pendaftaran & Dokumen Pendukung */}
       <ApplicantDocuments applicant={applicant} />
 
-      {/* 5. List Pertanyaan Interview (Bank Pertanyaan) */}
+      {/* 5. Jadwal Wawancara: pewawancara, jam, lokasi, status selesai */}
+      <ApplicantInterviewSchedule
+        interview={interview}
+        isSubmitted={Boolean(applicant.submitted_at) || applicant.status === "submitted"}
+      />
+
+      {/* 6. List Pertanyaan Interview (Bank Pertanyaan) */}
       <ApplicantInterviewQuestions
         applicant={applicant}
         interviewQuestions={interviewQuestions}
@@ -264,12 +267,6 @@ export function ApplicantDetailCard({
         isSavingAnswers={isSavingAnswers}
         answersSaveSuccess={answersSaveSuccess}
         readOnly={!canAssess}
-      />
-
-      {/* 6. Presensi / Absensi (UI Saja) */}
-      <ApplicantAttendance
-        attendanceStatus={attendanceStatus}
-        setAttendanceStatus={setAttendanceStatus}
       />
 
       {/* 7. Keputusan Penerimaan (ACC / Tolak) & Danger Zone */}

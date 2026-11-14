@@ -132,9 +132,15 @@ const SECTIONS: GuideSection[] = [
     title: "Detail & Penilaian Pendaftar",
     icon: UserCheck,
     requires: "Lihat pendaftar · Nilai pendaftar · Hapus pendaftar",
-    intro: "Halaman detail berisi biodata, alasan memilih divisi, CV, twibbon, catatan wawancara, dan keputusan.",
+    intro:
+      "Halaman detail berisi biodata, alasan memilih divisi, CV, twibbon, jadwal wawancara, catatan wawancara, dan keputusan.",
     steps: [
       { title: "Periksa berkas", detail: "Buka CV (link berlaku 2 jam) dan link twibbon/portofolio." },
+      {
+        title: "Cek jadwal wawancara",
+        detail:
+          "Kartu Jadwal Wawancara menampilkan tanggal & jam, lokasi, nama + WhatsApp kedua pewawancara, dan status (Menunggu konfirmasi, Dikonfirmasi · belum selesai, atau Selesai beserta waktu & siapa yang menandai). Klik Buka Sesi untuk membuka sesinya di tab baru.",
+      },
       {
         title: "Isi catatan wawancara",
         detail:

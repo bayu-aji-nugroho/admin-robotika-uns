@@ -4,7 +4,7 @@ export * from "./ApplicantAcademicAndContact";
 export * from "./ApplicantDivisionPreferences";
 export * from "./ApplicantDocuments";
 export * from "./ApplicantInterviewQuestions";
-export * from "./ApplicantAttendance";
+export * from "./ApplicantInterviewSchedule";
 export * from "./ApplicantAssessmentAndDangerZone";
 export * from "./ApplicantDeleteModal";
 

@@ -1,4 +1,5 @@
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
+import type { ApplicantInterviewInfo } from "./ApplicantInterviewSchedule";
 
 export interface DivisionItem {
   id: string;
@@ -49,6 +50,8 @@ export interface ApplicantDetailData {
 
 export interface ApplicantDetailCardProps {
   applicant: ApplicantDetailData;
+  /** Jadwal wawancara (null = belum memilih jadwal) */
+  interview?: ApplicantInterviewInfo | null;
   divisions?: DivisionItem[];
   interviewQuestions?: InterviewQuestionItem[];
   canAssess?: boolean;
@@ -56,5 +59,4 @@ export interface ApplicantDetailCardProps {
 }
 
 export type DecisionStatus = "pending" | "accepted" | "rejected";
-export type AttendanceStatus = "belum" | "hadir" | "tidak_hadir";
 

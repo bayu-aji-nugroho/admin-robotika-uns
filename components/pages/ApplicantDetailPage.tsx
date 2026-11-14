@@ -7,9 +7,11 @@ import {
   DivisionItem,
 } from "@/components/organisms/ApplicantDetailCard";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
+import type { ApplicantInterviewInfo } from "@/components/organisms/applicant-detail";
 
 interface ApplicantDetailPageProps {
   applicant: ApplicantDetailData;
+  interview?: ApplicantInterviewInfo | null;
   divisions?: DivisionItem[];
   interviewQuestions?: InterviewQuestionItem[];
   canAssess?: boolean;
@@ -18,6 +20,7 @@ interface ApplicantDetailPageProps {
 
 export function ApplicantDetailPage({
   applicant,
+  interview = null,
   divisions = [],
   interviewQuestions = [],
   canAssess = false,
@@ -29,6 +32,7 @@ export function ApplicantDetailPage({
         {/* Kartu Rincian Pendaftar */}
         <ApplicantDetailCard
           applicant={applicant}
+          interview={interview}
           divisions={divisions}
           interviewQuestions={interviewQuestions}
           canAssess={canAssess}

@@ -5,6 +5,7 @@ import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
 import { getAdminAccess, hasPermission } from "@/utils/adminAccess";
+import type { ApplicantInterviewInfo } from "@/components/organisms/applicant-detail";
 
 export const instant = false;
 
@@ -93,7 +94,7 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
   }
 
   // Jalankan pengambilan Signed URL, total pendaftar, urutan pendaftar, daftar divisi, dan pertanyaan wawancara secara paralel
-  const [signedResult, totalResult, orderResult, divisionsResult, questionsResult] =
+  const [signedResult, totalResult, orderResult, divisionsResult, questionsResult, bookingResult] =
     await Promise.all([
       applicant.cv_storage_path
         ? supabase.storage
@@ -116,7 +117,39 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
         .select("*")
         .order("order_index", { ascending: true })
         .order("created_at", { ascending: true }),
+      supabase
+        .from("interview_bookings")
+        .select("id, start_at, status, location, interviewer_ids, completed_at, completed_by")
+        .eq("applicant_id", applicant.id)
+        .maybeSingle(),
     ]);
+
+  // Jadwal wawancara: nama & WhatsApp pewawancara serta siapa yang menandai selesai
+  const booking = bookingResult?.data;
+  let interview: ApplicantInterviewInfo | null = null;
+  if (booking) {
+    const adminIds = [...(booking.interviewer_ids || []), booking.completed_by].filter(Boolean) as string[];
+    const { data: admins } = adminIds.length
+      ? await supabase.from("admin_whitelist").select("id, full_name, email, interview_whatsapp").in("id", adminIds)
+      : { data: [] };
+    const byId = new Map((admins || []).map((a) => [a.id, a]));
+    const nameOf = (id: string) => {
+      const a = byId.get(id);
+      return a ? a.full_name || a.email.split("@")[0] : "Admin";
+    };
+    interview = {
+      id: booking.id,
+      startAt: booking.start_at,
+      status: booking.status === "accepted" ? "accepted" : "pending",
+      location: booking.location,
+      completedAt: booking.completed_at,
+      completedByName: booking.completed_by ? nameOf(booking.completed_by) : null,
+      interviewers: ((booking.interviewer_ids || []) as string[]).map((id) => ({
+        name: nameOf(id),
+        whatsapp: byId.get(id)?.interview_whatsapp || null,
+      })),
+    };
+  }
 
   let freshCvUrl: string | null = null;
   if (signedResult?.data?.signedUrl) {
@@ -136,6 +169,7 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
         orderNumber,
         totalApplicants,
       }}
+      interview={interview}
       divisions={divisions}
       interviewQuestions={interviewQuestions}
       canAssess={hasPermission(access, "applicants.assess")}
