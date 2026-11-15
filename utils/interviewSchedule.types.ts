@@ -76,6 +76,13 @@ export interface InterviewSheetData {
   can_edit: boolean;
 }
 
+/** Calon yang sudah kirim formulir, dibagi sudah / belum memilih jadwal (RPC get_interview_booking_counts) */
+export interface InterviewBookingCounts {
+  submitted: number;
+  booked: number;
+  not_booked: number;
+}
+
 export interface ScheduleViewer {
   adminId: string;
   isSuperadmin: boolean;

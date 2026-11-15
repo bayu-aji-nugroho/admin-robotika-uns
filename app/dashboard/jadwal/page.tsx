@@ -1,5 +1,6 @@
 import { InterviewSchedulePage } from "@/components/pages/InterviewSchedulePage";
 import type {
+  InterviewBookingCounts,
   InterviewPair,
   ScheduleAdmin,
   ScheduledInterview,
@@ -65,7 +66,7 @@ export default async function JadwalWawancaraRoute() {
     redirect(`/?error=unauthorized_email&email=${encodeURIComponent(user.email)}`);
   }
 
-  const [adminsResult, pairsResult, dashboardResult] = await Promise.all([
+  const [adminsResult, pairsResult, dashboardResult, countsResult] = await Promise.all([
     supabase
       .from("admin_whitelist")
       .select("id, full_name, email, is_active, is_superadmin, interview_whatsapp, admin_roles(permissions)")
@@ -76,7 +77,10 @@ export default async function JadwalWawancaraRoute() {
       .order("created_at", { ascending: true }),
     // Kalender pribadi + booking (1 jam lalu s.d. 60 hari ke depan) dalam satu panggilan
     supabase.rpc("get_schedule_dashboard"),
+    // Calon yang sudah kirim formulir: sudah / belum memilih jadwal (draft tidak dihitung)
+    supabase.rpc("get_interview_booking_counts"),
   ]);
+  const bookingCounts = (countsResult.data as InterviewBookingCounts | null) || null;
 
   if (dashboardResult.error) {
     console.error("get_schedule_dashboard:", dashboardResult.error.message);
@@ -144,6 +148,7 @@ export default async function JadwalWawancaraRoute() {
       pairs={pairs}
       memberAvailability={memberAvailability}
       scheduled={scheduled}
+      bookingCounts={bookingCounts}
     />
   );
 }

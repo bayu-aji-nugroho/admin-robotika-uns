@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { CalendarCheck, Lock, Users } from "lucide-react";
+import { CalendarCheck, Lock, UserCheck, Users } from "lucide-react";
 import { MonthCalendar, SCHEDULE_DAYS_AHEAD, addDays } from "@/components/organisms/AvailabilityCalendarEditor";
 import {
   INTERVIEW_SLOT_MINUTES,
@@ -13,6 +13,7 @@ import {
   todayInJakarta,
 } from "@/utils/jakartaTime";
 import type {
+  InterviewBookingCounts,
   InterviewPair,
   MemberAvailabilitySlot,
   PairAvailabilitySlot,
@@ -26,6 +27,8 @@ interface AvailabilitySummaryProps {
   availability: PairAvailabilitySlot[];
   /** Kalender pribadi tiap pewawancara */
   memberAvailability: MemberAvailabilitySlot[];
+  /** Calon yang sudah kirim formulir: sudah / belum memilih jadwal */
+  bookingCounts?: InterviewBookingCounts | null;
 }
 
 interface SlotCell {
@@ -54,7 +57,13 @@ function toRanges(minutes: number[]): string[] {
   return ranges;
 }
 
-export function AvailabilitySummary({ pairs, admins, availability, memberAvailability }: AvailabilitySummaryProps) {
+export function AvailabilitySummary({
+  pairs,
+  admins,
+  availability,
+  memberAvailability,
+  bookingCounts = null,
+}: AvailabilitySummaryProps) {
   const [today] = useState(() => todayInJakarta());
   const [nowMs] = useState(() => Date.now());
 
@@ -112,6 +121,48 @@ export function AvailabilitySummary({ pairs, admins, availability, memberAvailab
 
   return (
     <div className="space-y-4 pt-3 border-t border-[#E4E4E7] dark:border-zinc-800">
+      {/* Calon anggota (sudah kirim formulir): sudah / belum memilih jadwal */}
+      {bookingCounts && (
+        <div className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 space-y-2.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <p className="flex items-center gap-1.5 text-xs font-bold text-[#18181b] dark:text-zinc-100">
+              <UserCheck className="w-3.5 h-3.5 text-[#B22234] dark:text-rose-400" />
+              Calon anggota memilih jadwal
+            </p>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+              dari <span className="font-semibold font-mono">{bookingCounts.submitted}</span> yang sudah kirim formulir
+              (draft tidak dihitung)
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900">
+              <p className="text-lg sm:text-xl font-bold font-mono text-emerald-800 dark:text-emerald-300">
+                {bookingCounts.booked}
+              </p>
+              <p className="text-[11px] text-emerald-800/80 dark:text-emerald-300/80">Sudah memilih jadwal</p>
+            </div>
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900">
+              <p className="text-lg sm:text-xl font-bold font-mono text-amber-800 dark:text-amber-300">
+                {bookingCounts.not_booked}
+              </p>
+              <p className="text-[11px] text-amber-800/80 dark:text-amber-300/80">Belum memilih jadwal</p>
+            </div>
+          </div>
+          {bookingCounts.submitted > 0 && (
+            <div
+              className="h-1.5 rounded-full bg-amber-200 dark:bg-amber-900/60 overflow-hidden"
+              role="img"
+              aria-label={`${Math.round((bookingCounts.booked / bookingCounts.submitted) * 100)}% sudah memilih jadwal`}
+            >
+              <div
+                className="h-full rounded-full bg-emerald-600 dark:bg-emerald-500"
+                style={{ width: `${(bookingCounts.booked / bookingCounts.submitted) * 100}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Ringkasan angka */}
       <div className="grid grid-cols-3 gap-2">
         {[

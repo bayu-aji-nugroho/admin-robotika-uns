@@ -3,6 +3,7 @@
 import React from "react";
 import { InterviewScheduleManager } from "@/components/organisms/InterviewScheduleManager";
 import type {
+  InterviewBookingCounts,
   InterviewPair,
   MemberAvailabilitySlot,
   ScheduleAdmin,
@@ -16,6 +17,7 @@ interface InterviewSchedulePageProps {
   pairs: InterviewPair[];
   memberAvailability: MemberAvailabilitySlot[];
   scheduled: ScheduledInterview[];
+  bookingCounts: InterviewBookingCounts | null;
 }
 
 export function InterviewSchedulePage(props: InterviewSchedulePageProps) {

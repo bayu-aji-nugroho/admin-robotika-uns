@@ -252,7 +252,8 @@ const SECTIONS: GuideSection[] = [
       },
       {
         title: "Pantau Ringkasan Gabungan",
-        detail: "Lihat hari & jam kosong semua pasangan, kesimpulan per pasangan, dan slot yang sudah dipesan.",
+        detail:
+          "Lihat jumlah calon anggota yang sudah / belum memilih jadwal (hanya yang sudah kirim formulir), hari & jam kosong semua pasangan, kesimpulan per pasangan, dan slot yang sudah dipesan.",
       },
       {
         title: "Catat lokasi sesi",

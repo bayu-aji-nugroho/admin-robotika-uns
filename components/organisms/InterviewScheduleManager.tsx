@@ -11,6 +11,7 @@ import { ScheduledSessionRow } from "@/components/organisms/ScheduledSessionRow"
 import { derivePairSlots } from "@/utils/derivePairSlots";
 import { formatJakartaDate, jakartaDateKey } from "@/utils/jakartaTime";
 import type {
+  InterviewBookingCounts,
   InterviewPair,
   MemberAvailabilitySlot,
   ScheduleAdmin,
@@ -24,6 +25,7 @@ interface InterviewScheduleManagerProps {
   pairs: InterviewPair[];
   memberAvailability: MemberAvailabilitySlot[];
   scheduled: ScheduledInterview[];
+  bookingCounts: InterviewBookingCounts | null;
 }
 
 const cardClass =
@@ -44,6 +46,7 @@ export function InterviewScheduleManager({
   pairs,
   memberAvailability,
   scheduled,
+  bookingCounts,
 }: InterviewScheduleManagerProps) {
   const router = useRouter();
   // Default: pewawancara melihat sesinya sendiri; pengelola sesi melihat semua
@@ -175,6 +178,7 @@ export function InterviewScheduleManager({
             admins={admins}
             availability={availability}
             memberAvailability={memberAvailability}
+            bookingCounts={bookingCounts}
           />
         ) : (
           <>
