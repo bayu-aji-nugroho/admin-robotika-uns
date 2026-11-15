@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { createClient } from "@/utils/supabase/server";
@@ -11,10 +11,19 @@ import {
   splitByPicks,
 } from "@/utils/interviewQuestionGroups";
 
+import {
+  describeExportFilters,
+  matchesExportFilters,
+  parseExportOptions,
+  slugifyFileLabel,
+} from "@/utils/exportOptions";
+
 // Lembar hasil wawancara (pertanyaan + jawaban), 1 bagian per calon anggota.
 // Query:
-//   ?applicant=<id>                       -> satu calon anggota
-//   ?division=all | unplaced | <id divisi> -> banyak calon anggota (divisi diterima)
+//   ?applicant=<id>   -> satu calon anggota
+//   selain itu        -> banyak calon anggota, difilter (lihat utils/exportOptions.ts)
+
+export const maxDuration = 60;
 
 interface ApplicantRow {
   id: string;
@@ -41,6 +50,7 @@ interface BookingRow {
   status: "pending" | "accepted";
   location: string | null;
   interviewer_ids: string[];
+  completed_at: string | null;
 }
 
 const BRAND_RED: [number, number, number] = [178, 34, 52];
@@ -56,10 +66,6 @@ const SELECT_COLUMNS =
 
 function lastY(doc: jsPDF, fallback: number) {
   return (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? fallback;
-}
-
-function slugify(value: string) {
-  return value.replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "") || "Lembar";
 }
 
 /** Pastikan ada ruang minimal di halaman; jika tidak, pindah ke halaman baru. */
@@ -213,131 +219,140 @@ function drawApplicant(
 }
 
 export async function GET(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Selalu dinamis (butuh cookie sesi); di luar try agar tidak ikut tertangkap saat build
+  await connection();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user || !user.email) {
-    return NextResponse.json({ error: "Sesi tidak sah. Silakan login kembali." }, { status: 401 });
-  }
+    if (!user || !user.email) {
+      return NextResponse.json({ error: "Sesi tidak sah. Silakan login kembali." }, { status: 401 });
+    }
 
-  const access = await getAdminAccess(supabase, user.email);
-  if (!hasPermission(access, "applicants.view")) {
+    const access = await getAdminAccess(supabase, user.email);
+    if (!hasPermission(access, "applicants.view")) {
+      return NextResponse.json(
+        { error: "Akses ditolak: Role Anda tidak memiliki hak melihat pendaftar." },
+        { status: 403 }
+      );
+    }
+
+    const params = new URL(request.url).searchParams;
+    const applicantId = (params.get("applicant") || "").trim();
+    const opts = parseExportOptions(params);
+
+    let applicantQuery = supabase.from("view_registrations").select(SELECT_COLUMNS).eq("status", "submitted");
+    if (applicantId) {
+      applicantQuery = applicantQuery.eq("id", applicantId);
+    }
+
+    const [applicantsResult, questionsResult, bookingsResult, adminsResult, divisionsResult, picksResult] =
+      await Promise.all([
+        applicantQuery,
+        supabase
+          .from("interview_questions")
+          .select("id, question, division, order_index")
+          .order("order_index", { ascending: true })
+          .order("created_at", { ascending: true }),
+        supabase.from("interview_bookings").select("applicant_id, start_at, status, location, interviewer_ids, completed_at"),
+        supabase.from("admin_whitelist").select("id, full_name, email"),
+        supabase.from("divisions").select("id, name"),
+        supabase.from("interview_question_picks").select("applicant_id, question_ids"),
+      ]);
+
+    if (applicantsResult.error) {
+      return NextResponse.json({ error: applicantsResult.error.message }, { status: 500 });
+    }
+
+    const divisionName = new Map((divisionsResult.data || []).map((d) => [d.id, d.name]));
+    if (!applicantId && opts.division !== "all" && opts.division !== "unplaced" && !divisionName.has(opts.division)) {
+      return NextResponse.json({ error: "Divisi tidak ditemukan." }, { status: 400 });
+    }
+
+    const bookings = new Map(((bookingsResult.data as BookingRow[]) || []).map((b) => [b.applicant_id, b]));
+
+    const applicants = ((applicantsResult.data as unknown as ApplicantRow[]) || [])
+      .filter((a) => applicantId || matchesExportFilters(a, bookings.get(a.id), opts))
+      .sort(
+        (a, b) =>
+          (a.accepted_division_name || "~").localeCompare(b.accepted_division_name || "~", "id") ||
+          (a.full_name || "").localeCompare(b.full_name || "", "id")
+      );
+
+    if (applicantId && applicants.length === 0) {
+      return NextResponse.json(
+        { error: "Pendaftar tidak ditemukan atau belum mengirim formulir." },
+        { status: 404 }
+      );
+    }
+
+    const questions = (questionsResult.data as GroupableQuestion[]) || [];
+    const picksByApplicant = new Map(
+      ((picksResult.data as { applicant_id: string; question_ids: string[] }[]) || []).map((p) => [
+        p.applicant_id,
+        p.question_ids,
+      ])
+    );
+    const adminNames = new Map(
+      (adminsResult.data || []).map((a) => [a.id, a.full_name || a.email.split("@")[0]])
+    );
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    if (applicants.length === 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("Tidak ada calon anggota untuk filter ini.", MARGIN, 20);
+    }
+
+    applicants.forEach((applicant, idx) => {
+      if (idx > 0) doc.addPage();
+      drawApplicant(
+        doc,
+        applicant,
+        questions,
+        bookings.get(applicant.id),
+        adminNames,
+        picksByApplicant.get(applicant.id) ?? null
+      );
+    });
+
+    // Footer semua halaman
+    const printedAt = formatJakartaDateTime(new Date().toISOString());
+    const totalPages = doc.getNumberOfPages();
+    for (let page = 1; page <= totalPages; page++) {
+      doc.setPage(page);
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(140);
+      doc.text(`Dicetak ${printedAt}`, MARGIN, pageHeight - 8);
+      doc.text(`Halaman ${page} dari ${totalPages}`, pageWidth - MARGIN, pageHeight - 8, { align: "right" });
+      doc.setTextColor(0);
+    }
+
+    const label = applicantId
+      ? applicants[0].full_name || applicants[0].nim || "Pendaftar"
+      : describeExportFilters(opts, divisionName);
+    const dateStamp = new Intl.DateTimeFormat("en-CA", { timeZone: JAKARTA_TIME_ZONE }).format(new Date());
+    const fileName = `Lembar_Wawancara_${slugifyFileLabel(label)}_${dateStamp}.pdf`;
+
+    return new NextResponse(doc.output("arraybuffer"), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (err: unknown) {
+    console.error("Ekspor lembar wawancara gagal:", err);
     return NextResponse.json(
-      { error: "Akses ditolak: Role Anda tidak memiliki hak melihat pendaftar." },
-      { status: 403 }
+      { error: `Gagal membuat PDF: ${err instanceof Error ? err.message : "kesalahan tidak diketahui"}` },
+      { status: 500 }
     );
   }
-
-  const params = new URL(request.url).searchParams;
-  const applicantId = (params.get("applicant") || "").trim();
-  const division = (params.get("division") || "all").trim();
-
-  let applicantQuery = supabase.from("view_registrations").select(SELECT_COLUMNS).eq("status", "submitted");
-  if (applicantId) {
-    applicantQuery = applicantQuery.eq("id", applicantId);
-  }
-
-  const [applicantsResult, questionsResult, bookingsResult, adminsResult, divisionsResult, picksResult] = await Promise.all([
-    applicantQuery,
-    supabase
-      .from("interview_questions")
-      .select("id, question, division, order_index")
-      .order("order_index", { ascending: true })
-      .order("created_at", { ascending: true }),
-    supabase.from("interview_bookings").select("applicant_id, start_at, status, location, interviewer_ids"),
-    supabase.from("admin_whitelist").select("id, full_name, email"),
-    supabase.from("divisions").select("id, name"),
-    supabase.from("interview_question_picks").select("applicant_id, question_ids"),
-  ]);
-
-  if (applicantsResult.error) {
-    return NextResponse.json({ error: applicantsResult.error.message }, { status: 500 });
-  }
-
-  const divisionName = new Map((divisionsResult.data || []).map((d) => [d.id, d.name]));
-  if (!applicantId && division !== "all" && division !== "unplaced" && !divisionName.has(division)) {
-    return NextResponse.json({ error: "Divisi tidak ditemukan." }, { status: 400 });
-  }
-
-  const applicants = ((applicantsResult.data as unknown as ApplicantRow[]) || [])
-    .filter((a) =>
-      applicantId || division === "all"
-        ? true
-        : division === "unplaced"
-        ? !a.accepted_division_id
-        : a.accepted_division_id === division
-    )
-    .sort(
-      (a, b) =>
-        (a.accepted_division_name || "~").localeCompare(b.accepted_division_name || "~", "id") ||
-        (a.full_name || "").localeCompare(b.full_name || "", "id")
-    );
-
-  if (applicantId && applicants.length === 0) {
-    return NextResponse.json(
-      { error: "Pendaftar tidak ditemukan atau belum mengirim formulir." },
-      { status: 404 }
-    );
-  }
-
-  const questions = (questionsResult.data as GroupableQuestion[]) || [];
-  const bookings = new Map(((bookingsResult.data as BookingRow[]) || []).map((b) => [b.applicant_id, b]));
-  const picksByApplicant = new Map(
-    ((picksResult.data as { applicant_id: string; question_ids: string[] }[]) || []).map((p) => [
-      p.applicant_id,
-      p.question_ids,
-    ])
-  );
-  const adminNames = new Map(
-    (adminsResult.data || []).map((a) => [a.id, a.full_name || a.email.split("@")[0]])
-  );
-
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-  if (applicants.length === 0) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text("Tidak ada calon anggota untuk filter ini.", MARGIN, 20);
-  }
-
-  applicants.forEach((applicant, idx) => {
-    if (idx > 0) doc.addPage();
-    drawApplicant(doc, applicant, questions, bookings.get(applicant.id), adminNames, picksByApplicant.get(applicant.id) ?? null);
-  });
-
-  // Footer semua halaman
-  const printedAt = formatJakartaDateTime(new Date().toISOString());
-  const totalPages = doc.getNumberOfPages();
-  for (let page = 1; page <= totalPages; page++) {
-    doc.setPage(page);
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(140);
-    doc.text(`Dicetak ${printedAt}`, MARGIN, pageHeight - 8);
-    doc.text(`Halaman ${page} dari ${totalPages}`, pageWidth - MARGIN, pageHeight - 8, { align: "right" });
-    doc.setTextColor(0);
-  }
-
-  const label = applicantId
-    ? applicants[0].full_name || applicants[0].nim || "Pendaftar"
-    : division === "all"
-    ? "Semua_Divisi"
-    : division === "unplaced"
-    ? "Belum_Ditempatkan"
-    : divisionName.get(division) || "Divisi";
-  const dateStamp = new Intl.DateTimeFormat("en-CA", { timeZone: JAKARTA_TIME_ZONE }).format(new Date());
-  const fileName = `Lembar_Wawancara_${slugify(label)}_${dateStamp}.pdf`;
-
-  return new NextResponse(doc.output("arraybuffer"), {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${fileName}"`,
-      "Cache-Control": "no-store",
-    },
-  });
 }

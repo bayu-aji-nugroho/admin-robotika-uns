@@ -116,11 +116,13 @@ const SECTIONS: GuideSection[] = [
       { title: "Cari pendaftar", detail: "Ketik nama, NIM, atau kode berkas di kolom pencarian." },
       { title: "Saring hasil OPREC", detail: "Pilih filter: Diterima, Dipertimbangkan, Belum Lengkap, atau Ditolak. Klik Reset untuk menghapus filter." },
       {
-        title: "Unduh PDF",
+        title: "Ekspor PDF",
         detail: (
           <>
-            Pilih divisi (atau semua divisi), lalu klik <strong>Daftar</strong> untuk daftar ringkas, atau{" "}
-            <strong>Lembar Wawancara</strong> untuk pertanyaan + jawaban, satu halaman per calon anggota.
+            Klik <strong>Ekspor PDF</strong>, lalu di pop-up pilih jenis dokumen (<strong>Daftar Calon Anggota</strong>{" "}
+            atau <strong>Lembar Wawancara</strong>), filter divisi (berdasarkan divisi diterima, pilihan 1, atau pilihan
+            1/2), status penilaian, dan status wawancara. Untuk Daftar, centang kolom yang ingin ditampilkan (termasuk
+            Pewawancara). Klik <strong>Unduh PDF</strong>; bila gagal, alasannya tampil di pop-up.
           </>
         ),
       },
