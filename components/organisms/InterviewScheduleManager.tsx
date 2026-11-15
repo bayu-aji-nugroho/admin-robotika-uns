@@ -2,12 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, CalendarDays, CheckCircle2, Users } from "lucide-react";
+import { AlertCircle, CalendarDays, CheckCircle2, Users, X } from "lucide-react";
 import { AvailabilityCalendarEditor } from "@/components/organisms/AvailabilityCalendarEditor";
 import { AvailabilitySummary } from "@/components/organisms/AvailabilitySummary";
 import { InterviewPairPanel } from "@/components/organisms/InterviewPairPanel";
 import { InterviewReadinessPanel } from "@/components/organisms/InterviewReadinessPanel";
 import { ScheduledSessionRow } from "@/components/organisms/ScheduledSessionRow";
+import type { RescheduleNotice } from "@/components/organisms/BookingRescheduler";
+import type { TransferPairOption } from "@/components/organisms/BookingTransferDialog";
 import { derivePairSlots } from "@/utils/derivePairSlots";
 import { formatJakartaDate, jakartaDateKey } from "@/utils/jakartaTime";
 import type {
@@ -67,6 +69,28 @@ export function InterviewScheduleManager({
 
   // Slot pasangan (irisan kalender kedua anggota) dihitung dari kalender pribadi
   const availability = derivePairSlots(pairs, memberAvailability, scheduled);
+  // Slot kosong mendatang per pasangan (pilihan saat pewawancara memindahkan jam sesi)
+  const freeSlotsByPair = new Map<string, string[]>();
+  // Pasangan yang kosong per waktu mulai (pilihan saat mengalihkan sesi ke pewawancara lain)
+  const freePairsByTime = new Map<number, string[]>();
+  for (const slot of availability) {
+    const time = new Date(slot.startAt).getTime();
+    if (slot.booking || time <= nowMs) continue;
+    freeSlotsByPair.set(slot.pairId, [...(freeSlotsByPair.get(slot.pairId) || []), slot.startAt]);
+    freePairsByTime.set(time, [...(freePairsByTime.get(time) || []), slot.pairId]);
+  }
+  const transferOptionsFor = (s: ScheduledInterview): TransferPairOption[] =>
+    (freePairsByTime.get(new Date(s.startAt).getTime()) || [])
+      .filter((pairId) => pairId !== s.pairId)
+      .flatMap((pairId) => {
+        const pair = pairs.find((p) => p.id === pairId);
+        if (!pair) return [];
+        const member = (id: string) => {
+          const a = admins.find((x) => x.id === id);
+          return { name: a?.name || "-", whatsapp: a?.whatsapp || null };
+        };
+        return [{ pairId, members: [member(pair.memberA), member(pair.memberB)] }];
+      });
   const nameOf = (id: string) => admins.find((a) => a.id === id)?.name || "-";
 
   const partnerOf = (adminId: string) => {
@@ -96,6 +120,9 @@ export function InterviewScheduleManager({
     }, 4000);
   };
 
+  // Setelah jam sesi dipindah: tawarkan pesan WhatsApp ke calon (tetap tampil walau barisnya pindah tanggal)
+  const [rescheduleNotice, setRescheduleNotice] = useState<RescheduleNotice | null>(null);
+
   const handleResult = (type: "success" | "error", message: string) => {
     showAlert(type, message);
     if (type === "success") router.refresh();
@@ -107,6 +134,43 @@ export function InterviewScheduleManager({
 
   return (
     <div className="space-y-6">
+      {rescheduleNotice && (
+        <div
+          role="status"
+          className="fixed bottom-4 inset-x-4 sm:left-auto sm:right-6 sm:max-w-md z-40 p-3 rounded-xl bg-white dark:bg-zinc-900 border border-emerald-300 dark:border-emerald-800 shadow-xl space-y-2"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs text-zinc-700 dark:text-zinc-200 leading-relaxed">
+              <strong>{rescheduleNotice.applicantName}</strong>: {rescheduleNotice.summary} Kabari calon anggota
+              agar tidak salah jadwal.
+            </p>
+            <button
+              type="button"
+              onClick={() => setRescheduleNotice(null)}
+              aria-label="Tutup"
+              className="p-0.5 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          {rescheduleNotice.whatsappUrl ? (
+            <a
+              href={rescheduleNotice.whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setRescheduleNotice(null)}
+              className="inline-flex items-center justify-center w-full gap-1.5 px-3 py-2 rounded-lg bg-[#25D366] hover:bg-[#1faa4f] text-white text-xs font-semibold"
+            >
+              Kabari {rescheduleNotice.applicantName} via WhatsApp
+            </a>
+          ) : (
+            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+              Nomor WhatsApp calon tidak tersedia, kabari lewat jalur lain.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Header + Pasangan */}
       <div className={`${cardClass} space-y-4`}>
         <div>
@@ -326,6 +390,9 @@ export function InterviewScheduleManager({
                       sessions.filter((o) => o.id !== s.id && o.pairId && o.pairId === s.pairId).length
                     }
                     nowMs={nowMs}
+                    freeSlots={freeSlotsByPair.get(s.pairId || "") || []}
+                    transferOptions={transferOptionsFor(s)}
+                    onRescheduled={setRescheduleNotice}
                     onResult={handleResult}
                   />
                 ))}

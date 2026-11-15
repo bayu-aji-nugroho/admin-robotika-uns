@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { Check, ClipboardList, ExternalLink, Lock } from "lucide-react";
 import { BookingLocationEditor } from "@/components/organisms/BookingLocationEditor";
+import { BookingRescheduler, type RescheduleNotice } from "@/components/organisms/BookingRescheduler";
+import { BookingTransferDialog, type TransferPairOption } from "@/components/organisms/BookingTransferDialog";
 import { setInterviewCompletedAction } from "@/app/actions/interviewSchedule";
 import { formatJakartaDateTime, formatJakartaHourRange } from "@/utils/jakartaTime";
 import type { ScheduledInterview, ScheduleViewer } from "@/utils/interviewSchedule.types";
@@ -14,6 +16,11 @@ interface ScheduledSessionRowProps {
   sameDayOthers: number;
   /** Waktu render (ms), untuk cek sesi sudah dimulai */
   nowMs: number;
+  /** Slot kosong mendatang milik pasangan sesi ini (untuk Ubah Jam) */
+  freeSlots: string[];
+  /** Pasangan lain yang jam sesi ini kosong (untuk Alihkan ke Pewawancara Lain) */
+  transferOptions: TransferPairOption[];
+  onRescheduled: (info: RescheduleNotice) => void;
   onResult: (type: "success" | "error", message: string) => void;
 }
 
@@ -34,6 +41,9 @@ export function ScheduledSessionRow({
   viewer,
   sameDayOthers,
   nowMs,
+  freeSlots,
+  transferOptions,
+  onRescheduled,
   onResult,
 }: ScheduledSessionRowProps) {
   const [busy, setBusy] = useState(false);
@@ -149,6 +159,32 @@ export function ScheduledSessionRow({
           />
         ) : (
           <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Lokasi: {s.location || "belum diisi"}</p>
+        )}
+
+        {canEdit && !isDone && (
+          <div className="flex flex-wrap items-start gap-2">
+            {s.pairId && (
+              <BookingRescheduler
+                bookingId={s.id}
+                applicantName={s.applicantName}
+                currentStartAt={s.startAt}
+                freeSlots={freeSlots}
+                onResult={onResult}
+                onRescheduled={onRescheduled}
+              />
+            )}
+            {/* Mengalihkan hanya untuk sesi yang belum dimulai (jam tetap sama) */}
+            {!hasStarted && (
+              <BookingTransferDialog
+                bookingId={s.id}
+                applicantName={s.applicantName}
+                startAt={s.startAt}
+                options={transferOptions}
+                onResult={onResult}
+                onTransferred={onRescheduled}
+              />
+            )}
+          </div>
         )}
 
         {canOpenSheet && (

@@ -142,6 +142,37 @@ export async function setBookingLocationAction(
   });
 }
 
+/**
+ * Pindahkan jam sesi wawancara ke slot kosong lain di kalender kedua pewawancara sesi itu.
+ * Mengembalikan nama & WhatsApp calon agar pewawancara bisa langsung memberi tahu.
+ */
+export async function rescheduleBookingAction(bookingId: string, startAt: string) {
+  if (!startAt || Number.isNaN(new Date(startAt).getTime())) {
+    return { success: false, error: "Jam baru tidak valid." } as ActionResult<{
+      start_at: string;
+      applicant_name: string | null;
+      applicant_whatsapp: string | null;
+    }>;
+  }
+  return callRpc<{ start_at: string; applicant_name: string | null; applicant_whatsapp: string | null }>(
+    "reschedule_interview_booking",
+    { p_booking: bookingId, p_start_at: startAt }
+  );
+}
+
+/**
+ * Alihkan sesi ke pasangan pewawancara lain di jam yang sama (jam harus kosong di kalender
+ * kedua anggota pasangan tujuan). Konfirmasi ke pewawancara tujuan dilakukan sebelumnya.
+ */
+export async function transferBookingAction(bookingId: string, pairId: string) {
+  return callRpc<{
+    start_at: string;
+    interviewers: string[];
+    applicant_name: string | null;
+    applicant_whatsapp: string | null;
+  }>("transfer_interview_booking", { p_booking: bookingId, p_pair: pairId });
+}
+
 /** Tandai / batalkan sesi wawancara selesai (pewawancara sesi itu atau superadmin). */
 export async function setInterviewCompletedAction(bookingId: string, done: boolean) {
   return callRpc<string | null>("set_interview_completed", { p_booking: bookingId, p_done: done });

@@ -346,6 +346,16 @@ const SECTIONS: GuideSection[] = [
           "Ketik lokasi/link di kolom lokasi sesi (atau klik tombol cepat Sekretariat / Online), lalu Simpan. Centang “Terapkan ke semua sesi hari ini” bila tempatnya sama. Label Lokasi belum diisi hilang dan lokasi langsung tampil di website calon.",
       },
       {
+        title: "Ubah jam bila ada perubahan mendadak",
+        detail:
+          "Klik Ubah Jam di sesi, pilih jam baru dari slot yang sama-sama kosong di kalender kedua pewawancara sesi itu, lalu Simpan Jam Baru. Bila jam yang diinginkan belum ada, isi dulu di Data & Kalender Saya (kedua pewawancara). Setelah tersimpan muncul tombol Kabari via WhatsApp untuk memberi tahu calon; jam baru juga langsung tampil di Dashboard Akun calon. Status konfirmasi & lokasi tidak berubah.",
+      },
+      {
+        title: "Alihkan ke pewawancara lain bila berhalangan",
+        detail:
+          "Klik Alihkan ke Pewawancara Lain. Pop-up menampilkan pasangan yang jam sesi itu kosong di kalender kedua anggotanya. Pilih pasangan, hubungi mereka dulu lewat tombol Tanya via WhatsApp, lalu centang “Saya sudah mengonfirmasi…”, baru tombol Alihkan ke Pewawancara aktif. Jam, status konfirmasi, lokasi, dan catatan wawancara tidak berubah; kabari calon lewat tombol WhatsApp yang muncul setelahnya. Hanya untuk sesi yang belum dimulai.",
+      },
+      {
         title: "Lakukan wawancara",
         detail:
           "Klik Buka Lembar Wawancara (tab baru). Pertanyaan sudah menyesuaikan divisi pilihan calon. Tulis jawaban & catatan khusus lalu Simpan Catatan.",
