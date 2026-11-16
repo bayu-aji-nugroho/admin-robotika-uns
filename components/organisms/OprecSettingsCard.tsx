@@ -325,6 +325,10 @@ export function OprecSettingsCard({
             disabled={!canEdit}
             className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-[#E4E4E7] dark:border-zinc-700/80 rounded-lg text-xs sm:text-sm text-[#18181b] dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden transition-colors"
           />
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            Saat OPREC dibuka, label ini menjadi teks notifikasi di bawah navbar landing page (lihat pratinjau di bawah).
+            Saat ditutup, label tampil di halaman pendaftaran.
+          </p>
         </div>
 
         {/* Row 3: Tanggal Pengumuman Hasil Seleksi */}
@@ -404,7 +408,7 @@ export function OprecSettingsCard({
         </div>
 
         {/* Row 3c: Warna notifikasi "Open Recruitment dibuka" di landing page */}
-        <OprecBannerColorField value={bannerColor} onChange={setBannerColor} disabled={!canEdit} />
+        <OprecBannerColorField value={bannerColor} onChange={setBannerColor} disabled={!canEdit} label={label} />
 
         {/* Row 4: Action Buttons */}
         <div className="pt-4 border-t border-[#E4E4E7] dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between gap-3">

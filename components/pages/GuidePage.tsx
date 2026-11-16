@@ -191,7 +191,7 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Warna notifikasi di landing page",
         detail:
-          "Pilih warna notifikasi “Open Recruitment dibuka, silakan daftar!” yang muncul di bawah navbar website: klik salah satu warna siap pakai atau pilih warna sendiri, cek pratinjaunya, lalu Simpan. Warna teks (putih/hitam) menyesuaikan otomatis; “Pakai warna bawaan” mengembalikan ke hijau.",
+          "Teks notifikasi di bawah navbar website saat OPREC dibuka diambil dari Label Pengumuman (kosong = “Open Recruitment dibuka, silakan daftar!”). Pilih warnanya: klik salah satu warna siap pakai atau pilih warna sendiri, cek pratinjaunya, lalu Simpan. Warna teks (putih/hitam) menyesuaikan otomatis; “Pakai warna bawaan” mengembalikan ke hijau.",
       },
       {
         title: "Pengecualian login SSO",

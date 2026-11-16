@@ -14,10 +14,16 @@ interface OprecBannerColorFieldProps {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  /** Label Pengumuman (teks notifikasi). Kosong = teks standar */
+  label?: string;
 }
 
 /** Pemilih warna notifikasi "Open Recruitment dibuka" + pratinjau langsung */
-export function OprecBannerColorField({ value, onChange, disabled = false }: OprecBannerColorFieldProps) {
+export function OprecBannerColorField({ value, onChange, disabled = false, label = "" }: OprecBannerColorFieldProps) {
+  const bannerText =
+    label.trim() && label.trim() !== "Informasi pendaftaran segera diumumkan"
+      ? label.trim()
+      : "Open Recruitment dibuka, silakan daftar!";
   const color = isValidBannerColor(value) ? value.toLowerCase() : DEFAULT_BANNER_COLOR;
   const text = bannerTextColor(color);
 
@@ -85,7 +91,7 @@ export function OprecBannerColorField({ value, onChange, disabled = false }: Opr
           className="flex items-center gap-2 sm:gap-3 max-w-full pl-3.5 pr-1.5 py-1.5 rounded shadow-lg"
           style={{ backgroundColor: color, color: text.color, boxShadow: `0 10px 15px -3px ${color}4d` }}
         >
-          <span className="text-xs sm:text-sm font-semibold truncate">Open Recruitment dibuka, silakan daftar!</span>
+          <span className="text-xs sm:text-sm font-semibold truncate">{bannerText}</span>
           <span
             className="inline-flex items-center gap-1 shrink-0 px-2.5 sm:px-3 py-1 rounded-sm text-[11px] sm:text-xs font-bold"
             style={{ backgroundColor: text.color, color }}
