@@ -133,7 +133,7 @@ const SECTIONS: GuideSection[] = [
     id: "detail",
     title: "Detail & Penilaian Pendaftar",
     icon: UserCheck,
-    requires: "Lihat pendaftar · Nilai pendaftar · Hapus pendaftar",
+    requires: "Lihat pendaftar · Nilai pendaftar · Hapus pendaftar · Edit data: superadmin",
     intro:
       "Halaman detail berisi biodata, alasan memilih divisi, CV, twibbon, jadwal wawancara, catatan wawancara, dan keputusan.",
     steps: [
@@ -153,6 +153,11 @@ const SECTIONS: GuideSection[] = [
         detail: "Pilih Diterima (beserta divisi penempatan), Ditolak, atau Pertimbangan. Butuh izin Nilai pendaftar.",
       },
       { title: "Unduh lembar wawancara", detail: "Klik Unduh PDF untuk lembar wawancara pendaftar tersebut." },
+      {
+        title: "Edit data pendaftar (khusus superadmin)",
+        detail:
+          "Klik Edit Data di kartu identitas untuk memperbaiki nama, NIM, angkatan, WhatsApp, fakultas/prodi, pilihan divisi beserta alasannya, tautan twibbon/portofolio, atau mengganti CV. CV baru (PDF, maks. 1 MB) menimpa CV lama, dan berkas lama dihapus permanen dari storage.",
+      },
       {
         title: "Hapus pendaftar (hati-hati)",
         detail: "Menghapus data secara permanen dan tidak bisa dibatalkan. Butuh izin Hapus pendaftar.",

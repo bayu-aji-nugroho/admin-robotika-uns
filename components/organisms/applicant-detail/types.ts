@@ -56,6 +56,8 @@ export interface ApplicantDetailCardProps {
   interviewQuestions?: InterviewQuestionItem[];
   canAssess?: boolean;
   canDelete?: boolean;
+  /** Superadmin: boleh mengubah data pendaftar */
+  canEdit?: boolean;
 }
 
 export type DecisionStatus = "pending" | "accepted" | "rejected";

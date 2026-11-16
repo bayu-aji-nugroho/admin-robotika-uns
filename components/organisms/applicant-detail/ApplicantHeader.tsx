@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { Pencil } from "lucide-react";
 import { ApplicantDetailData } from "./types";
 import { HasilOprecMeta } from "../ApplicantList";
 
@@ -11,6 +12,8 @@ interface ApplicantHeaderProps {
   currentStatusMeta: HasilOprecMeta;
   orderNum: number;
   totalNum: number;
+  /** Ada = tampilkan tombol Edit Data (superadmin) */
+  onEdit?: () => void;
 }
 
 export function ApplicantHeader({
@@ -20,6 +23,7 @@ export function ApplicantHeader({
   currentStatusMeta,
   orderNum,
   totalNum,
+  onEdit,
 }: ApplicantHeaderProps) {
   const getStatusSolidClasses = (statusMeta: HasilOprecMeta) => {
     if (statusMeta.isAutoRejected) {
@@ -94,6 +98,17 @@ export function ApplicantHeader({
               {orderNum}/{totalNum}
             </span>
           </div>
+
+          {onEdit && (
+            <button
+              type="button"
+              onClick={onEdit}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-2xs cursor-pointer transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit Data
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -19,6 +19,7 @@ import {
   ApplicantInterviewSchedule,
   ApplicantAssessmentAndDangerZone,
   ApplicantDeleteModal,
+  ApplicantEditModal,
 } from "./applicant-detail";
 
 // Re-export types untuk backward-compatibility dengan consumer lain
@@ -31,8 +32,10 @@ export function ApplicantDetailCard({
   interviewQuestions = [],
   canAssess = true,
   canDelete = true,
+  canEdit = false,
 }: ApplicantDetailCardProps) {
   const router = useRouter();
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   // 2. State dialog konfirmasi hapus peserta permanen
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -237,6 +240,7 @@ export function ApplicantDetailCard({
         currentStatusMeta={currentStatusMeta}
         orderNum={orderNum}
         totalNum={totalNum}
+        onEdit={canEdit ? () => setIsEditOpen(true) : undefined}
       />
 
       {/* 2. Grid Data Akademik & Kontak */}
@@ -294,6 +298,15 @@ export function ApplicantDetailCard({
         canAssess={canAssess}
         canDelete={canDelete}
       />
+
+      {/* Pop-up Edit Data (superadmin) */}
+      {canEdit && isEditOpen && (
+        <ApplicantEditModal
+          applicant={applicant}
+          divisions={divisions}
+          onClose={() => setIsEditOpen(false)}
+        />
+      )}
 
       {/* Modal Konfirmasi Hapus Peserta Permanen */}
       <ApplicantDeleteModal

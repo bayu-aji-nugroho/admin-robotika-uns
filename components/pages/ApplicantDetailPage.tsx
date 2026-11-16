@@ -16,6 +16,7 @@ interface ApplicantDetailPageProps {
   interviewQuestions?: InterviewQuestionItem[];
   canAssess?: boolean;
   canDelete?: boolean;
+  canEdit?: boolean;
 }
 
 export function ApplicantDetailPage({
@@ -25,6 +26,7 @@ export function ApplicantDetailPage({
   interviewQuestions = [],
   canAssess = false,
   canDelete = false,
+  canEdit = false,
 }: ApplicantDetailPageProps) {
   return (
     <div className="flex-1 bg-[#F9F9F8] dark:bg-[#09090b] min-h-screen py-6 px-4 sm:px-8 transition-colors">
@@ -37,6 +39,7 @@ export function ApplicantDetailPage({
           interviewQuestions={interviewQuestions}
           canAssess={canAssess}
           canDelete={canDelete}
+          canEdit={canEdit}
         />
       </div>
     </div>

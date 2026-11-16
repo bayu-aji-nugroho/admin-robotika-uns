@@ -174,6 +174,7 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
       interviewQuestions={interviewQuestions}
       canAssess={hasPermission(access, "applicants.assess")}
       canDelete={hasPermission(access, "applicants.delete")}
+      canEdit={access.isSuperadmin}
     />
   );
 }

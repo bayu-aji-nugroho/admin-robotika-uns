@@ -7,4 +7,5 @@ export * from "./ApplicantInterviewQuestions";
 export * from "./ApplicantInterviewSchedule";
 export * from "./ApplicantAssessmentAndDangerZone";
 export * from "./ApplicantDeleteModal";
+export * from "./ApplicantEditModal";
 
