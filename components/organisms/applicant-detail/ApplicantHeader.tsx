@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Pencil } from "lucide-react";
+import { StarToggle } from "@/components/atoms/StarToggle";
 import { ApplicantDetailData } from "./types";
 import { HasilOprecMeta } from "../ApplicantList";
 
@@ -14,6 +15,8 @@ interface ApplicantHeaderProps {
   totalNum: number;
   /** Ada = tampilkan tombol Edit Data (superadmin) */
   onEdit?: () => void;
+  /** Boleh memberi/mencabut bintang */
+  canStar?: boolean;
 }
 
 export function ApplicantHeader({
@@ -24,7 +27,12 @@ export function ApplicantHeader({
   orderNum,
   totalNum,
   onEdit,
+  canStar = false,
 }: ApplicantHeaderProps) {
+  const [star, setStar] = React.useState({
+    starred: Boolean(applicant.starred),
+    by: applicant.starred_by_name ?? null,
+  });
   const getStatusSolidClasses = (statusMeta: HasilOprecMeta) => {
     if (statusMeta.isAutoRejected) {
       return "bg-amber-600 text-white border-amber-600";
@@ -98,6 +106,16 @@ export function ApplicantHeader({
               {orderNum}/{totalNum}
             </span>
           </div>
+
+          <StarToggle
+            variant="button"
+            applicantId={applicant.id}
+            applicantName={applicant.full_name}
+            starred={star.starred}
+            starredByName={star.by}
+            canToggle={canStar}
+            onChange={(starred, by) => setStar({ starred, by })}
+          />
 
           {onEdit && (
             <button

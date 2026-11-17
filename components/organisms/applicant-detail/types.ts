@@ -46,6 +46,9 @@ export interface ApplicantDetailData {
   orderNumber?: number;
   totalApplicants?: number;
   interview_answers?: Record<string, string> | null;
+  /** Calon potensial (bintang) */
+  starred?: boolean;
+  starred_by_name?: string | null;
 }
 
 export interface ApplicantDetailCardProps {
@@ -58,6 +61,8 @@ export interface ApplicantDetailCardProps {
   canDelete?: boolean;
   /** Superadmin: boleh mengubah data pendaftar */
   canEdit?: boolean;
+  /** Semua admin kecuali Viewer: boleh memberi bintang */
+  canStar?: boolean;
 }
 
 export type DecisionStatus = "pending" | "accepted" | "rejected";

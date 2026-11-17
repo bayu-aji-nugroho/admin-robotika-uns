@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { MessageSquare, Loader2, Check, Save, ChevronDown, ChevronRight, FileDown } from "lucide-react";
+import { MessageSquare, Loader2, Save, ChevronDown, ChevronRight, FileDown } from "lucide-react";
+import { AutosaveIndicator } from "@/components/atoms/AutosaveIndicator";
+import { useInterviewAutosave } from "@/utils/useInterviewAutosave";
 import { downloadFromApi } from "@/utils/downloadFile";
 import { ApplicantDetailData } from "./types";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
@@ -13,9 +15,6 @@ interface ApplicantInterviewQuestionsProps {
   interviewQuestions: InterviewQuestionItem[];
   interviewAnswers: Record<string, string>;
   setInterviewAnswers: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  onSaveInterviewAnswers: () => void;
-  isSavingAnswers: boolean;
-  answersSaveSuccess: boolean;
   /** Hanya lihat (mis. role Viewer / tanpa hak Nilai pendaftar) */
   readOnly?: boolean;
 }
@@ -126,11 +125,11 @@ export function ApplicantInterviewQuestions({
   interviewQuestions,
   interviewAnswers,
   setInterviewAnswers,
-  onSaveInterviewAnswers,
-  isSavingAnswers,
-  answersSaveSuccess,
   readOnly = false,
 }: ApplicantInterviewQuestionsProps) {
+  // Simpan otomatis tiap berhenti mengetik (hanya kunci yang berubah, aman dipakai bersamaan)
+  const [initialAnswers] = useState(() => ({ ...interviewAnswers }));
+  const autosave = useInterviewAutosave(applicant.id, interviewAnswers, !readOnly, initialAnswers);
   // State toggle accordion per section pertanyaan (Default: tertutup / false)
   const [expandedSections, setExpandedSections] = useState({
     general: false,
@@ -150,6 +149,8 @@ export function ApplicantInterviewQuestions({
   // PDF dibuat dari data tersimpan, jadi simpan catatan dulu sebelum mengunduh
   const handleDownloadReport = async () => {
     setIsDownloading(true);
+    // Pastikan catatan terbaru sudah tersimpan sebelum PDF dibuat
+    if (!readOnly) await autosave.flush();
     const error = await downloadFromApi(
       `/api/export/interview-report?applicant=${encodeURIComponent(applicant.id)}`,
       "Lembar_Wawancara.pdf"
@@ -197,21 +198,22 @@ export function ApplicantInterviewQuestions({
             <span>Unduh PDF</span>
           </button>
           {!readOnly && (
+          <>
+          <AutosaveIndicator status={autosave.status} savedAt={autosave.savedAt} error={autosave.error} />
           <button
             type="button"
-            onClick={onSaveInterviewAnswers}
-            disabled={isSavingAnswers}
+            onClick={() => void autosave.flush()}
+            disabled={autosave.status === "saving" || autosave.status === "saved" || autosave.status === "idle"}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#B22234] text-white hover:bg-[#8B0000] disabled:opacity-60 transition-colors shadow-xs cursor-pointer"
           >
-            {isSavingAnswers ? (
+            {autosave.status === "saving" ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : answersSaveSuccess ? (
-              <Check className="w-3.5 h-3.5 text-emerald-300" />
             ) : (
               <Save className="w-3.5 h-3.5" />
             )}
-            <span>{answersSaveSuccess ? "Catatan Tersimpan" : "Simpan Catatan"}</span>
+            <span>Simpan Sekarang</span>
           </button>
+          </>
           )}
         </div>
       </div>

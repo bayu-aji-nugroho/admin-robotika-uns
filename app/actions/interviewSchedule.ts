@@ -223,3 +223,19 @@ export async function saveInterviewAnswersAction(
   }
   return callRpc<null>("save_interview_answers", { p_applicant: applicantId, p_answers: clean });
 }
+
+/**
+ * Auto-save: kirim hanya catatan yang berubah (nilai kosong = hapus), digabung di database
+ * agar dua pewawancara yang mengetik bersamaan tidak saling menimpa.
+ */
+export async function patchInterviewAnswersAction(
+  applicantId: string,
+  changes: Record<string, string>
+): Promise<ActionResult<null>> {
+  const clean: Record<string, string> = {};
+  for (const [key, value] of Object.entries(changes || {})) {
+    if (typeof value === "string") clean[key] = value;
+  }
+  if (Object.keys(clean).length === 0) return { success: true, data: null };
+  return callRpc<null>("patch_interview_answers", { p_applicant: applicantId, p_changes: clean });
+}

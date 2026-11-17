@@ -33,6 +33,7 @@ export function ApplicantDetailCard({
   canAssess = true,
   canDelete = true,
   canEdit = false,
+  canStar = false,
 }: ApplicantDetailCardProps) {
   const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -65,8 +66,6 @@ export function ApplicantDetailCard({
   const [interviewAnswers, setInterviewAnswers] = useState<Record<string, string>>(
     () => (applicant.interview_answers as Record<string, string>) || {}
   );
-  const [isSavingAnswers, setIsSavingAnswers] = useState(false);
-  const [answersSaveSuccess, setAnswersSaveSuccess] = useState(false);
 
   // Handler: Hapus peserta permanen dari server
   const handleConfirmDelete = async () => {
@@ -94,48 +93,6 @@ export function ApplicantDetailCard({
       setDeleteError(msg);
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  // Handler: Simpan catatan jawaban interview
-  const handleSaveInterviewAnswers = async (updatedAnswers?: Record<string, string>) => {
-    setIsSavingAnswers(true);
-    setAnswersSaveSuccess(false);
-    try {
-      const supabase = createClient();
-      const currentAnswers = updatedAnswers || interviewAnswers;
-
-      const dbStatus =
-        decisionStatus === "accepted"
-          ? "diterima"
-          : decisionStatus === "rejected"
-          ? "ditolak"
-          : "pertimbangan";
-
-      const targetDivId = decisionStatus === "accepted" ? acceptedDivisionId || null : null;
-
-      const { error } = await supabase.from("assessments").upsert(
-        {
-          applicant_id: applicant.id,
-          status: dbStatus,
-          notes: notes || null,
-          accepted_division_id: targetDivId,
-          interview_answers: currentAnswers,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "applicant_id" }
-      );
-
-      if (error) {
-        console.error("Gagal menyimpan catatan wawancara:", error.message);
-      } else {
-        setAnswersSaveSuccess(true);
-        setTimeout(() => setAnswersSaveSuccess(false), 2500);
-      }
-    } catch (err) {
-      console.error("Gagal menyimpan catatan wawancara:", err);
-    } finally {
-      setIsSavingAnswers(false);
     }
   };
 
@@ -170,7 +127,6 @@ export function ApplicantDetailCard({
           status: dbStatus,
           notes: targetNotes,
           accepted_division_id: targetDivId,
-          interview_answers: interviewAnswers,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "applicant_id" }
@@ -241,6 +197,7 @@ export function ApplicantDetailCard({
         orderNum={orderNum}
         totalNum={totalNum}
         onEdit={canEdit ? () => setIsEditOpen(true) : undefined}
+        canStar={canStar}
       />
 
       {/* 2. Grid Data Akademik & Kontak */}
@@ -267,9 +224,6 @@ export function ApplicantDetailCard({
         interviewQuestions={interviewQuestions}
         interviewAnswers={interviewAnswers}
         setInterviewAnswers={setInterviewAnswers}
-        onSaveInterviewAnswers={() => handleSaveInterviewAnswers()}
-        isSavingAnswers={isSavingAnswers}
-        answersSaveSuccess={answersSaveSuccess}
         readOnly={!canAssess}
       />
 

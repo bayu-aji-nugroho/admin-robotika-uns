@@ -17,6 +17,7 @@ interface ApplicantDetailPageProps {
   canAssess?: boolean;
   canDelete?: boolean;
   canEdit?: boolean;
+  canStar?: boolean;
 }
 
 export function ApplicantDetailPage({
@@ -27,6 +28,7 @@ export function ApplicantDetailPage({
   canAssess = false,
   canDelete = false,
   canEdit = false,
+  canStar = false,
 }: ApplicantDetailPageProps) {
   return (
     <div className="flex-1 bg-[#F9F9F8] dark:bg-[#09090b] min-h-screen py-6 px-4 sm:px-8 transition-colors">
@@ -40,6 +42,7 @@ export function ApplicantDetailPage({
           canAssess={canAssess}
           canDelete={canDelete}
           canEdit={canEdit}
+          canStar={canStar}
         />
       </div>
     </div>

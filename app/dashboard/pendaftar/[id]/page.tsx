@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { InterviewQuestionItem } from "@/app/actions/interviewQuestions";
 import { getAdminAccess, hasPermission } from "@/utils/adminAccess";
 import type { ApplicantInterviewInfo } from "@/components/organisms/applicant-detail";
+import { fetchApplicantStars } from "@/utils/applicantStars";
 
 export const instant = false;
 
@@ -151,6 +152,8 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
     };
   }
 
+  const stars = await fetchApplicantStars(supabase);
+
   let freshCvUrl: string | null = null;
   if (signedResult?.data?.signedUrl) {
     freshCvUrl = signedResult.data.signedUrl;
@@ -166,6 +169,8 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
       applicant={{
         ...applicant,
         cv_file_url: freshCvUrl,
+        starred: stars.has(applicant.id),
+        starred_by_name: stars.get(applicant.id) ?? null,
         orderNumber,
         totalApplicants,
       }}
@@ -175,6 +180,7 @@ export default async function ApplicantDetailRoute({ params }: PageProps) {
       canAssess={hasPermission(access, "applicants.assess")}
       canDelete={hasPermission(access, "applicants.delete")}
       canEdit={access.isSuperadmin}
+      canStar={!access.isViewer}
     />
   );
 }

@@ -154,6 +154,11 @@ const SECTIONS: GuideSection[] = [
       },
       { title: "Unduh lembar wawancara", detail: "Klik Unduh PDF untuk lembar wawancara pendaftar tersebut." },
       {
+        title: "Tandai calon potensial (bintang)",
+        detail:
+          "Klik ikon bintang di samping nama pada Daftar Pendaftar, atau tombol Beri Bintang di detail pendaftar. Bintang terlihat oleh semua admin beserta siapa yang memberinya; tombol Potensial di daftar menampilkan calon berbintang saja. Bisa dilakukan semua admin termasuk pewawancara (juga dari lembar wawancara), kecuali role Viewer yang hanya bisa melihat.",
+      },
+      {
         title: "Edit data pendaftar (khusus superadmin)",
         detail:
           "Klik Edit Data di kartu identitas untuk memperbaiki nama, NIM, angkatan, WhatsApp, fakultas/prodi, pilihan divisi beserta alasannya, tautan twibbon/portofolio, atau mengganti CV. CV baru (PDF, maks. 1 MB) menimpa CV lama, dan berkas lama dihapus permanen dari storage.",
@@ -309,6 +314,7 @@ const SECTIONS: GuideSection[] = [
       "Daftar sesi otomatis hanya menampilkan sesi Anda. Hapus centang “Hanya yang saya wawancarai” untuk melihat semua.",
       "Slot yang sudah dipesan calon anggota terkunci dan tidak ikut terhapus saat Anda mengubah kalender.",
       "Sesi bisa ditandai selesai kapan saja, termasuk bila wawancara dilakukan lebih awal dari jadwal (akan diminta konfirmasi).",
+      "Catatan wawancara tersimpan otomatis sekitar 1,5 detik setelah berhenti mengetik (lihat keterangan “Tersimpan otomatis”). Dua pewawancara bisa mengisi lembar yang sama bersamaan tanpa saling menimpa.",
     ],
   },
   {

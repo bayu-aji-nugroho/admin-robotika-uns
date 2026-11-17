@@ -9,17 +9,19 @@ import {
 interface DashboardPageProps {
   initialRegistrations?: RegistrationItem[];
   divisions?: { id: string; name: string }[];
+  canStar?: boolean;
 }
 
 export function DashboardPage({
   initialRegistrations = [],
   divisions = [],
+  canStar = false,
 }: DashboardPageProps) {
   return (
     <div className="flex-1 bg-[#F9F9F8] dark:bg-[#09090b] min-h-screen py-6 px-4 sm:px-8 transition-colors">
       <div className="max-w-6xl mx-auto">
         {/* List Component dengan Search & Filter */}
-        <ApplicantList initialRegistrations={initialRegistrations} divisions={divisions} />
+        <ApplicantList initialRegistrations={initialRegistrations} divisions={divisions} canStar={canStar} />
       </div>
     </div>
   );

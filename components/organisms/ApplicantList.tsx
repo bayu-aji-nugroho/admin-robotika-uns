@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, Filter, X, RotateCcw, RefreshCw, ChevronRight, FileDown } from "lucide-react";
+import { Search, Filter, X, RotateCcw, RefreshCw, ChevronRight, FileDown, Star } from "lucide-react";
+import { StarToggle } from "@/components/atoms/StarToggle";
+import { fetchApplicantStars } from "@/utils/applicantStars";
 import { ExportPdfModal } from "@/components/organisms/ExportPdfModal";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
@@ -17,6 +19,9 @@ export interface RegistrationItem {
   registration_code?: string | null;
   created_at?: string | null;
   submitted_at?: string | null;
+  /** Ditandai calon potensial (bintang) */
+  starred?: boolean;
+  starred_by_name?: string | null;
 }
 
 export type DecisionStatusType = "accepted" | "rejected" | "pending" | "incomplete";
@@ -127,14 +132,17 @@ interface ApplicantListProps {
   initialRegistrations: RegistrationItem[];
   /** Pilihan filter ekspor PDF (berdasarkan divisi diterima) */
   divisions?: { id: string; name: string }[];
+  /** Boleh memberi/mencabut bintang (semua admin kecuali Viewer) */
+  canStar?: boolean;
 }
 
-export function ApplicantList({ initialRegistrations, divisions = [] }: ApplicantListProps) {
+export function ApplicantList({ initialRegistrations, divisions = [], canStar = false }: ApplicantListProps) {
   const router = useRouter();
   const [registrations, setRegistrations] =
     useState<RegistrationItem[]>(initialRegistrations);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [onlyStarred, setOnlyStarred] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
 
@@ -159,16 +167,23 @@ export function ApplicantList({ initialRegistrations, divisions = [] }: Applican
       const matchesStatus =
         selectedStatus === "all" || hasilMeta.type === selectedStatus;
 
-      return matchesSearch && matchesStatus;
+      return matchesSearch && matchesStatus && (!onlyStarred || Boolean(item.starred));
     });
-  }, [registrations, searchQuery, selectedStatus]);
+  }, [registrations, searchQuery, selectedStatus, onlyStarred]);
 
-  const hasActiveFilter = searchQuery.trim() !== "" || selectedStatus !== "all";
+  const starredCount = registrations.filter((r) => r.starred).length;
+  const hasActiveFilter = searchQuery.trim() !== "" || selectedStatus !== "all" || onlyStarred;
 
   const handleResetFilter = () => {
     setSearchQuery("");
     setSelectedStatus("all");
+    setOnlyStarred(false);
   };
+
+  const updateStar = (id: string, starred: boolean, starredByName: string | null) =>
+    setRegistrations((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, starred, starred_by_name: starredByName } : r))
+    );
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
@@ -197,7 +212,14 @@ export function ApplicantList({ initialRegistrations, divisions = [] }: Applican
       }
 
       if (!error && data) {
-        setRegistrations(data);
+        const stars = await fetchApplicantStars(supabase);
+        setRegistrations(
+          (data as RegistrationItem[]).map((r) => ({
+            ...r,
+            starred: stars.has(r.id),
+            starred_by_name: stars.get(r.id) ?? null,
+          }))
+        );
       }
       router.refresh();
     } catch {
@@ -254,6 +276,23 @@ export function ApplicantList({ initialRegistrations, divisions = [] }: Applican
               ▼
             </div>
           </div>
+
+          {/* Filter calon potensial (bintang) */}
+          <button
+            type="button"
+            onClick={() => setOnlyStarred((v) => !v)}
+            aria-pressed={onlyStarred}
+            title="Tampilkan hanya calon anggota yang diberi bintang (potensial)"
+            className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-colors cursor-pointer shrink-0 ${
+              onlyStarred
+                ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-300"
+                : "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700/70 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            }`}
+          >
+            <Star className={`w-3.5 h-3.5 ${onlyStarred || starredCount > 0 ? "fill-amber-400 text-amber-500" : ""}`} />
+            <span>Potensial</span>
+            <span className="font-mono tabular-nums">{starredCount}</span>
+          </button>
 
           {/* Tombol Reset jika filter aktif */}
           {hasActiveFilter && (
@@ -385,7 +424,19 @@ export function ApplicantList({ initialRegistrations, divisions = [] }: Applican
 
                     {/* 2. Nama */}
                     <td className="py-3.5 px-4 sm:px-5 font-semibold text-zinc-900 dark:text-zinc-100 group-hover:text-[#B22234] dark:group-hover:text-rose-400 transition-colors">
-                      {item.full_name || "Nama tidak dicantumkan"}
+                      <span className="inline-flex items-center gap-2">
+                        {(canStar || item.starred) && (
+                          <StarToggle
+                            applicantId={item.id}
+                            applicantName={item.full_name}
+                            starred={Boolean(item.starred)}
+                            starredByName={item.starred_by_name}
+                            canToggle={canStar}
+                            onChange={(starred, by) => updateStar(item.id, starred, by)}
+                          />
+                        )}
+                        {item.full_name || "Nama tidak dicantumkan"}
+                      </span>
                     </td>
 
                     {/* 3. NIM */}

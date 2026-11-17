@@ -4,7 +4,11 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ChevronRight, ExternalLink, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
-import { getInterviewSheetAction, saveInterviewAnswersAction } from "@/app/actions/interviewSchedule";
+import { getInterviewSheetAction } from "@/app/actions/interviewSchedule";
+import { getApplicantStarAction } from "@/app/actions/applicantStars";
+import { StarToggle } from "@/components/atoms/StarToggle";
+import { AutosaveIndicator } from "@/components/atoms/AutosaveIndicator";
+import { useInterviewAutosave } from "@/utils/useInterviewAutosave";
 import { INTERVIEW_NOTES_KEY, groupInterviewQuestions, splitByPicks } from "@/utils/interviewQuestionGroups";
 import { useQuestionPicks } from "@/utils/useQuestionPicks";
 import type { InterviewSheetData, SheetQuestion } from "@/utils/interviewSchedule.types";
@@ -40,7 +44,19 @@ export function InterviewSheetPanel({
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [savedAnswers, setSavedAnswers] = useState<string>("{}");
+  const autosave = useInterviewAutosave(applicantId, answers, Boolean(sheet?.can_edit));
+  const { resetBaseline } = autosave;
+  const [star, setStar] = useState<{ starred: boolean; by: string | null; canToggle: boolean } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getApplicantStarAction(applicantId).then((res) => {
+      if (active) setStar({ starred: res.starred, by: res.starredByName, canToggle: res.canToggle });
+    });
+    return () => {
+      active = false;
+    };
+  }, [applicantId]);
 
   useEffect(() => {
     let active = true;
@@ -51,14 +67,14 @@ export function InterviewSheetPanel({
         return;
       }
       const loaded = res.data.answers || {};
+      resetBaseline(loaded);
       setSheet(res.data);
       setAnswers(loaded);
-      setSavedAnswers(JSON.stringify(loaded));
     });
     return () => {
       active = false;
     };
-  }, [applicantId]);
+  }, [applicantId, resetBaseline]);
 
   const { ready: picksReady, picks } = useQuestionPicks(
     applicantId,
@@ -91,18 +107,12 @@ export function InterviewSheetPanel({
     (n, s) => n + s.shown.filter(isAnswered).length + s.hidden.filter(isAnswered).length,
     0
   );
-  const isDirty = JSON.stringify(answers) !== savedAnswers;
-
   const setAnswer = (key: string, value: string) => setAnswers((prev) => ({ ...prev, [key]: value }));
 
   const save = async () => {
-    const res = await saveInterviewAnswersAction(applicantId, answers);
-    if (!res.success) {
-      onResult("error", res.error || "Gagal menyimpan catatan wawancara.");
-      return false;
-    }
-    setSavedAnswers(JSON.stringify(answers));
-    return true;
+    const ok = await autosave.flush();
+    if (!ok) onResult("error", autosave.error || "Gagal menyimpan catatan wawancara.");
+    return ok;
   };
 
   const handleSave = async () => {
@@ -114,7 +124,7 @@ export function InterviewSheetPanel({
 
   const handleSaveAndComplete = async () => {
     setBusy(true);
-    const ok = (isDirty ? await save() : true) && (await onComplete());
+    const ok = (await save()) && (await onComplete());
     setBusy(false);
     if (ok) onResult("success", "Catatan tersimpan dan sesi ditandai selesai.");
   };
@@ -140,12 +150,25 @@ export function InterviewSheetPanel({
           {[applicant.prodi, applicant.angkatan ? `Angkatan ${applicant.angkatan}` : null].filter(Boolean).join(" · ")}
           {total > 0 && <span className="ml-2 font-mono">{answered}/{total} terjawab</span>}
         </div>
-        <Link
-          href={`/dashboard/pendaftar/${applicant.id}`}
-          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#B22234] dark:text-rose-400 hover:underline self-start"
-        >
-          Detail pendaftar <ExternalLink className="w-3 h-3" />
-        </Link>
+        <div className="flex items-center gap-3 self-start">
+          {star && (
+            <StarToggle
+              variant="button"
+              applicantId={applicant.id}
+              applicantName={applicant.full_name}
+              starred={star.starred}
+              starredByName={star.by}
+              canToggle={star.canToggle}
+              onChange={(starred, by) => setStar((s) => (s ? { ...s, starred, by } : s))}
+            />
+          )}
+          <Link
+            href={`/dashboard/pendaftar/${applicant.id}`}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#B22234] dark:text-rose-400 hover:underline"
+          >
+            Detail pendaftar <ExternalLink className="w-3 h-3" />
+          </Link>
+        </div>
       </div>
 
       {total === 0 ? (
@@ -164,7 +187,7 @@ export function InterviewSheetPanel({
                 rows={isPage ? 2 : 1}
                 value={answers[q.id] || ""}
                 onChange={(e) => setAnswer(q.id, e.target.value)}
-                disabled={!canEdit || busy}
+                disabled={!canEdit}
                 placeholder="Catatan jawaban..."
                 className={`${textareaClass} min-h-[34px]`}
               />
@@ -204,7 +227,7 @@ export function InterviewSheetPanel({
           rows={2}
           value={answers[INTERVIEW_NOTES_KEY] || ""}
           onChange={(e) => setAnswer(INTERVIEW_NOTES_KEY, e.target.value)}
-          disabled={!canEdit || busy}
+          disabled={!canEdit}
           placeholder="Kesan umum, hal yang perlu ditindaklanjuti..."
           className={`${textareaClass} min-h-[52px]`}
         />
@@ -212,22 +235,25 @@ export function InterviewSheetPanel({
 
       {canEdit ? (
         <div
-          className={`flex flex-wrap justify-end gap-2 ${
+          className={`flex flex-wrap items-center justify-end gap-2 ${
             isPage
               ? "sticky bottom-0 -mx-4 sm:mx-0 px-4 sm:px-0 py-3 bg-[#F9F9F8]/95 dark:bg-[#09090b]/95 backdrop-blur border-t border-zinc-200 dark:border-zinc-800 sm:border-0 sm:bg-transparent sm:dark:bg-transparent sm:backdrop-blur-none"
               : ""
           }`}
         >
+          <span className="mr-auto">
+            <AutosaveIndicator status={autosave.status} savedAt={autosave.savedAt} error={autosave.error} />
+          </span>
           <Button
             type="button"
             variant="secondary"
             size="sm"
             onClick={handleSave}
             isLoading={busy}
-            disabled={busy || !isDirty}
+            disabled={busy || autosave.status === "saved" || autosave.status === "idle"}
             icon={<Save className="w-3.5 h-3.5" />}
           >
-            Simpan Catatan
+            Simpan Sekarang
           </Button>
           {canComplete && (
             <Button

@@ -3,6 +3,8 @@ import { createClient } from "@/utils/supabase/server";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { getAdminAccess } from "@/utils/adminAccess";
+import { fetchApplicantStars } from "@/utils/applicantStars";
 
 export const instant = false;
 
@@ -66,10 +68,18 @@ export default async function DashboardRoute() {
     redirect(`/?error=unauthorized_email&email=${encodeURIComponent(user.email)}`);
   }
 
+  const [access, stars] = await Promise.all([getAdminAccess(supabase, user.email), fetchApplicantStars(supabase)]);
+  const withStars = (registrations || []).map((r) => ({
+    ...r,
+    starred: stars.has(r.id),
+    starred_by_name: stars.get(r.id) ?? null,
+  }));
+
   return (
     <DashboardPage
-      initialRegistrations={registrations || []}
+      initialRegistrations={withStars}
       divisions={divisionsResult.data || []}
+      canStar={Boolean(access && !access.isViewer)}
     />
   );
 }
