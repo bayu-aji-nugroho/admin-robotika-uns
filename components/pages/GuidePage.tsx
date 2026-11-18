@@ -146,7 +146,7 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Isi catatan wawancara",
         detail:
-          "Pertanyaan otomatis menyesuaikan divisi pilihan 1 & 2. Saat lembar pertama kali dibuka, sistem mengacak 5 soal General, 5 soal Pilihan 1, dan 5 soal Pilihan 2, lalu menguncinya (semua pewawancara & PDF melihat soal yang sama). Soal sisanya ada di dropdown “Pertanyaan lain” dan tetap bisa diisi. Tulis jawaban lalu klik Simpan Catatan.",
+          "Pertanyaan otomatis menyesuaikan divisi pilihan 1 & 2. Saat lembar pertama kali dibuka, semua soal General ditampilkan, sedangkan soal divisi diacak 5 untuk Pilihan 1 dan 5 untuk Pilihan 2, lalu dikunci (semua pewawancara & PDF melihat soal yang sama). Soal sisanya ada di dropdown “Pertanyaan lain” dan tetap bisa diisi. Tulis jawaban, catatan tersimpan otomatis.",
       },
       {
         title: "Beri keputusan",

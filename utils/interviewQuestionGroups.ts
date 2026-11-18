@@ -60,19 +60,20 @@ export function groupInterviewQuestions<T extends GroupableQuestion>(
   return { general, primary, secondary };
 }
 
-/** Jumlah soal yang ditampilkan per bagian (General, Pilihan 1, Pilihan 2) */
+/** Jumlah soal yang ditampilkan per bagian divisi (Pilihan 1, Pilihan 2). General selalu tampil semua. */
 export const QUESTIONS_PER_GROUP = 5;
 
 /**
- * Mengacak soal terpilih: 5 per bagian. Soal yang sudah punya jawaban selalu ikut terpilih
- * agar catatan lama tidak tersembunyi; sisanya diisi acak sampai 5.
+ * Mengacak soal terpilih: 5 per bagian divisi (General tidak diacak, selalu tampil semua).
+ * Soal yang sudah punya jawaban selalu ikut terpilih agar catatan lama tidak tersembunyi;
+ * sisanya diisi acak sampai 5.
  */
 export function buildQuestionPicks(
   groups: { general: GroupableQuestion[]; primary: GroupableQuestion[]; secondary: GroupableQuestion[] },
   answers: Record<string, string>
 ): string[] {
   const picks: string[] = [];
-  for (const items of [groups.general, groups.primary, groups.secondary]) {
+  for (const items of [groups.primary, groups.secondary]) {
     const answered = items.filter((q) => (answers[q.id] || "").trim());
     const rest = items.filter((q) => !(answers[q.id] || "").trim());
     for (let i = rest.length - 1; i > 0; i--) {
@@ -88,9 +89,12 @@ export function buildQuestionPicks(
 /**
  * Memisahkan soal satu bagian menjadi yang ditampilkan (terpilih) dan yang disembunyikan
  * di dropdown "Pertanyaan lain". Tanpa data terpilih (belum diacak), semua ditampilkan.
+ * Soal General tidak diacak: selalu ditampilkan semua.
  */
 export function splitByPicks<T extends GroupableQuestion>(items: T[], picks: string[] | null) {
-  if (!picks) return { shown: items, hidden: [] as T[] };
+  if (!picks || items.every((q) => (q.division || "").toLowerCase() === "general")) {
+    return { shown: items, hidden: [] as T[] };
+  }
   const picked = new Set(picks);
   const shown = items.filter((q) => picked.has(q.id));
   // Bagian tanpa satu pun soal terpilih (mis. divisi berubah setelah diacak): tampilkan semua

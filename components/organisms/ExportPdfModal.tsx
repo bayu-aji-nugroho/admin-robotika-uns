@@ -267,7 +267,7 @@ export function ExportPdfModal({ isOpen, onClose, divisions }: ExportPdfModalPro
 
           {docType === "interview" && (
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Berisi identitas, jadwal & pewawancara, 5 soal terpilih per bagian beserta jawabannya (ditambah soal lain
+              Berisi identitas, jadwal & pewawancara, semua soal General + 5 soal terpilih per divisi beserta jawabannya (ditambah soal lain
               yang ikut dijawab), dan catatan. Untuk banyak orang, persempit filter agar PDF lebih cepat dibuat.
             </p>
           )}

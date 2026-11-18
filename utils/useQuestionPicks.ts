@@ -7,7 +7,7 @@ import { buildQuestionPicks, type GroupableQuestion } from "@/utils/interviewQue
 type Groups = { general: GroupableQuestion[]; primary: GroupableQuestion[]; secondary: GroupableQuestion[] };
 
 /**
- * Soal terpilih (5 per bagian) untuk lembar wawancara seorang calon anggota.
+ * Soal terpilih (5 per bagian divisi; General selalu semua) untuk lembar wawancara seorang calon anggota.
  * Pertama kali dibuka: diacak di browser lalu dikunci di database; selanjutnya selalu sama.
  * `ready` false selama belum dimuat. `picks` null = tampilkan semua soal (belum diacak).
  */

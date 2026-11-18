@@ -191,7 +191,7 @@ export async function getInterviewSheetAction(applicantId: string): Promise<Acti
 }
 
 /**
- * Ambil soal terpilih (5 per bagian) seorang calon anggota. Bila belum pernah diacak,
+ * Ambil soal terpilih (5 per bagian divisi) seorang calon anggota. Bila belum pernah diacak,
  * `candidate` (hasil acak di browser) disimpan & dikunci. null = belum diacak (role hanya-lihat).
  * Tidak memakai callRpc agar halaman tidak di-revalidate saat lembar dibuka.
  */

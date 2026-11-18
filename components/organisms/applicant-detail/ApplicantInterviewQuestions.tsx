@@ -161,7 +161,7 @@ export function ApplicantInterviewQuestions({
 
   // General, Divisi Pilihan 1, dan Divisi Pilihan 2 (sama dengan isi lembar wawancara PDF)
   const groups = groupInterviewQuestions(interviewQuestions, applicant);
-  // 5 soal acak per bagian, dikunci saat pertama kali dibuka; sisanya di dropdown "Pertanyaan lain"
+  // General tampil semua; soal divisi 5 acak per bagian, dikunci saat pertama kali dibuka; sisanya di dropdown "Pertanyaan lain"
   const { picks } = useQuestionPicks(applicant.id, groups, interviewAnswers);
   const general = splitByPicks(groups.general, picks);
   const primary = splitByPicks(groups.primary, picks);
