@@ -23,7 +23,8 @@ const securityHeaders = [
   },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
+    // Kamera hanya untuk situs ini sendiri (scanner QR presensi acara)
+    value: "camera=(self), microphone=(), geolocation=()",
   },
 ];
 

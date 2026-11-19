@@ -48,12 +48,18 @@ export default async function EventDetailRoute({ params }: PageProps) {
   }
 
   const canManage = hasPermission(access, "events.manage");
-  // Sinkron otomatis: calon anggota yang baru diterima/mendaftar langsung dapat tiket
-  if (canManage) {
-    await supabase.rpc("sync_event_attendees", { p_event_id: eventId });
-  }
+  const fetchAttendees = () =>
+    supabase
+      .from("event_attendances")
+      .select(
+        "id, event_id, applicant_id, qr_token, status, checked_in_at, checked_in_by, created_at, applicants(id, full_name, nim, prodi, fakultas)"
+      )
+      .eq("event_id", eventId)
+      .order("created_at", { ascending: true });
 
-  const [eventResult, attendeesResult] = await Promise.all([
+  // Sinkron otomatis berjalan bersamaan dengan pemuatan data agar halaman tidak menunggu;
+  // bila ada peserta baru, daftar peserta dimuat ulang sekali
+  const [eventResult, firstAttendees, syncResult] = await Promise.all([
     supabase
       .from("division_events")
       .select(
@@ -61,14 +67,10 @@ export default async function EventDetailRoute({ params }: PageProps) {
       )
       .eq("id", eventId)
       .maybeSingle(),
-    supabase
-      .from("event_attendances")
-      .select(
-        "id, event_id, applicant_id, qr_token, status, checked_in_at, checked_in_by, created_at, applicants(id, full_name, nim, prodi, fakultas)"
-      )
-      .eq("event_id", eventId)
-      .order("created_at", { ascending: true }),
+    fetchAttendees(),
+    canManage ? supabase.rpc("sync_event_attendees", { p_event_id: eventId }) : null,
   ]);
+  const attendeesResult = Number(syncResult?.data) > 0 ? await fetchAttendees() : firstAttendees;
 
   const ev = eventResult.data;
   if (!ev) {

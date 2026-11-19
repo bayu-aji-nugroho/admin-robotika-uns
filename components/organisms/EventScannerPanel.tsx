@@ -247,7 +247,8 @@ export function EventScannerPanel({
       {/* Viewport kamera */}
       <div
         className={`mx-auto w-full max-w-sm rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-zinc-950 ${
-          isScanning ? "block" : "hidden"
+          // Harus terlihat saat kamera dinyalakan: html5-qrcode butuh ukuran elemen yang nyata
+          isScanning || isStarting ? "block" : "hidden"
         }`}
       >
         <div id={readerId} className="w-full" />
