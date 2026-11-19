@@ -53,6 +53,12 @@ export const ADMIN_PERMISSIONS = [
     description:
       "Mengubah lokasi, tanda selesai, dan lembar wawancara di semua sesi, termasuk milik pasangan lain.",
   },
+  {
+    key: "events.manage",
+    label: "Kelola acara divisi",
+    description:
+      "Menambahkan acara divisi, menyiapkan data tiket QR calon anggota, dan memindai QR Code kehadiran.",
+  },
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number]["key"];

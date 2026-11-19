@@ -1,0 +1,169 @@
+# Implementation Plan: Fitur Acara Divisi & Data Tiket QR Presensi
+
+- **Proyek**: Admin Panel UKM Robotika UNS (`e:\MyData\robotikaUNS\admin`)
+- **Database**: Supabase (`RobotikaSYS` / `nrjorfpizemjgtaajgvh`)
+- **Tujuan**: Memungkinkan role `admin` dan `superadmin` menambahkan acara untuk setiap divisi, secara otomatis membentuk data tiket + `qr_token` unik untuk setiap calon anggota pada divisi tersebut (untuk di-generate menjadi QR Code di **Web Peserta**), serta memindai QR Code dengan kamera untuk mencatat kehadiran.
+
+---
+
+## 1. Batasan Tanggung Jawab (*System Boundary*)
+
+| Komponen | Tanggung Jawab | Ruang Lingkup |
+| :--- | :--- | :--- |
+| **Web Admin** (`robotikaUNS/admin`) | • CRUD acara per divisi (role `admin` & `superadmin`)<br>• Memicu pembuatan data tiket + `qr_token` unik untuk tiap anggota divisi<br>• Menampilkan daftar peserta acara & status kehadiran (`pending` / `present`)<br>• Menyediakan kamera *scanner* untuk memindai `qr_token` peserta | Tidak merender gambar QR Code di UI admin (hanya menyimpan & mengelola data tiket). |
+| **Supabase** (`RobotikaSYS`) | • Menyimpan tabel `division_events` & `event_attendances`<br>• Menjalankan RPC pembentuk tiket massal & validasi *check-in* QR<br>• Mengatur RLS agar peserta hanya bisa membaca tiket miliknya sendiri | Single source of truth antara Web Admin dan Web Peserta. |
+| **Web Peserta** (Repo Terpisah) | • Mengambil data acara & `qr_token` milik user yang login<br>• Merender `qr_token` menjadi gambar QR Code (via `qrcode.react`) | Menampilkan jadwal acara divisi, QR Code tiket, dan status kehadiran. |
+
+---
+
+## 2. Desain Database & Migrasi Supabase
+
+**File Migrasi**: `supabase/migrations/20261123100000_division_events_qr.sql`
+
+### 2.1. Penambahan Permission RBAC
+1. Tambahkan key **`events.manage`** pada constraint `admin_roles_permissions_known` di tabel `public.admin_roles` dan di `utils/permissions.ts`.
+2. **Superadmin** (`is_superadmin = true`) otomatis memiliki permission `events.manage`.
+3. **Admin** yang diberi permission `events.manage` pada `admin_roles` dapat membuat/mengelola acara dan melakukan scan kehadiran.
+4. **Viewer** (`viewer.readonly`) hanya memiliki akses baca (`applicants.view`).
+
+### 2.2. Tabel `public.division_events`
+```sql
+CREATE TABLE IF NOT EXISTS public.division_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  division_id varchar NOT NULL REFERENCES public.divisions(id) ON DELETE RESTRICT,
+  target_scope text NOT NULL DEFAULT 'accepted'
+    CHECK (target_scope IN ('accepted', 'registered_p1', 'registered_all')),
+  event_date timestamptz NOT NULL,
+  end_date timestamptz,
+  location text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_by text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+```
+**Penjelasan `target_scope`**:
+- `accepted`: Calon anggota yang sudah dinyatakan diterima pada divisi tersebut (`assessments.accepted_division_id = division_id` dan `assessments.status = 'diterima'`).
+- `registered_p1`: Calon anggota yang memilih divisi tersebut sebagai Pilihan 1 (`applicant_divisions.priority = 1`).
+- `registered_all`: Seluruh calon anggota yang memilih divisi tersebut di Pilihan 1 atau Pilihan 2 (`applicant_divisions`).
+
+### 2.3. Tabel `public.event_attendances` (Data Tiket & Token QR Peserta)
+```sql
+CREATE TABLE IF NOT EXISTS public.event_attendances (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES public.division_events(id) ON DELETE CASCADE,
+  applicant_id uuid NOT NULL REFERENCES public.applicants(id) ON DELETE CASCADE,
+  qr_token text NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(24), 'hex'),
+  status text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'present', 'excused')),
+  checked_in_at timestamptz,
+  checked_in_by text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (event_id, applicant_id)
+);
+```
+
+### 2.4. Fungsi RPC (`SECURITY DEFINER`)
+1. **`public.create_division_event(p_title, p_description, p_division_id, p_target_scope, p_event_date, p_end_date, p_location)`**:
+   - Memverifikasi `public.has_admin_permission('events.manage')`.
+   - Menyimpan baris baru di `public.division_events`.
+   - Menghasilkan baris di `public.event_attendances` beserta `qr_token` acak untuk seluruh `applicant_id` yang sesuai `division_id` dan `target_scope`.
+   - Mengembalikan `{ event_id, tickets_created }`.
+2. **`public.sync_event_attendees(p_event_id uuid)`**:
+   - Memverifikasi `public.has_admin_permission('events.manage')`.
+   - Menambahkan tiket peserta baru yang menyusul diterima/mendaftar menggunakan `INSERT ... ON CONFLICT (event_id, applicant_id) DO NOTHING` (tidak menimpa token lama).
+   - Mengembalikan jumlah tiket baru yang ditambahkan.
+3. **`public.check_in_event_qr(p_event_id uuid, p_qr_token text)`**:
+   - Memverifikasi `public.has_admin_permission('events.manage')`.
+   - Mencocokkan `event_id` dan `qr_token`.
+   - Jika tidak ditemukan -> `{ ok: false, code: 'not_found' }`.
+   - Jika sudah berstatus `present` -> `{ ok: false, code: 'already_present', checked_in_at, applicant }`.
+   - Jika valid dan `pending` -> update `status = 'present'`, `checked_in_at = now()`, `checked_in_by = email`, lalu kembalikan `{ ok: true, code: 'checked_in', checked_in_at, applicant }`.
+
+### 2.5. Kebijakan RLS (*Row Level Security*)
+- **`division_events`**:
+  - `SELECT`: Admin (`has_admin_permission('applicants.view')`) atau peserta yang memiliki baris tiket di `event_attendances` untuk `event_id` tersebut.
+  - `INSERT / UPDATE / DELETE`: Admin dengan `has_admin_permission('events.manage')`.
+- **`event_attendances`**:
+  - `SELECT`: Admin (`has_admin_permission('applicants.view')`) atau peserta pemilik `applicant_id` (`applicants.user_id = auth.uid()`).
+  - `INSERT / UPDATE / DELETE`: Admin dengan `has_admin_permission('events.manage')` atau via RPC `SECURITY DEFINER`.
+
+---
+
+## 3. Rencana Implementasi Web Admin (`e:\MyData\robotikaUNS\admin`)
+
+### 3.1. Dependency Baru
+- Install `html5-qrcode` untuk akses kamera perangkat (mobile/laptop) pada modul scanner presensi.
+- Tidak perlu package generator gambar QR di Web Admin.
+
+### 3.2. File yang Dimodifikasi
+1. **`utils/permissions.ts`**
+   - Tambahkan `"events.manage"` ke array `ADMIN_PERMISSIONS`.
+2. **`components/organisms/DashboardSidebar.tsx`**
+   - Tambahkan item navigasi **Acara Divisi** (`href="/dashboard/acara"`, ikon `CalendarCheck` dari `lucide-react`) pada section `# oprec`.
+
+### 3.3. File Baru (*Atomic Design*)
+1. **`app/dashboard/acara/page.tsx`** (Server Component)
+   - Verifikasi session & `getAdminAccess(supabase, user.email)`.
+   - Ambil daftar divisi aktif (`divisions`) dan daftar acara (`division_events`) beserta hitungan peserta (`total_count`, `present_count`).
+2. **`components/pages/EventsPage.tsx`** (Page Component)
+   - Header halaman, filter divisi, tombol **+ Tambah Acara** (khusus `hasPermission(access, "events.manage")`), dan daftar kartu acara.
+3. **`components/organisms/EventFormModal.tsx`** (Organism)
+   - Form modal pembuatan/edit acara: Judul, Deskripsi, Pilih Divisi (11 divisi aktif), Cakupan Peserta (`accepted` / `registered_p1` / `registered_all`), Tanggal & Jam Mulai/Selesai (`utils/jakartaTime.ts`), Lokasi.
+   - Submit memanggil RPC `create_division_event` agar seluruh data tiket + `qr_token` langsung terbuat.
+4. **`app/dashboard/acara/[id]/page.tsx`** (Server Component Detail Acara)
+   - Memuat detail acara + daftar `event_attendances` (join `applicants`: `full_name`, `nim`, `prodi`, `status`, `checked_in_at`, `qr_token`).
+5. **`components/organisms/EventScannerPanel.tsx`** (Organism)
+   - Mengakses kamera dengan `html5-qrcode` (`facingMode: "environment"`), mendukung pemilihan kamera.
+   - Cooldown 2 detik antar-scan untuk mencegah double trigger.
+   - Memanggil RPC `check_in_event_qr` dan menampilkan status visual (Hijau = Berhasil Hadir, Kuning = Sudah Absen, Merah = QR Tidak Valid).
+6. **`components/organisms/EventAttendeeTable.tsx`** (Organism)
+   - Tabel daftar anggota divisi yang sudah mendapat data tiket, filter status (`Semua`, `Hadir`, `Belum Hadir`), pencarian nama/NIM, tombol **Sinkronkan Anggota Baru** (`sync_event_attendees`), dan aksi **Tandai Hadir Manual** (fallback).
+
+---
+
+## 4. Kontrak Integrasi Web Peserta (Repo Terpisah)
+
+Web Peserta membaca data yang telah dibuat oleh Web Admin melalui Supabase Client (dengan sesi user peserta):
+
+### 4.1. Query Tiket Acara Milik Peserta
+```ts
+const { data: tickets } = await supabase
+  .from("event_attendances")
+  .select(`
+    id,
+    qr_token,
+    status,
+    checked_in_at,
+    division_events (
+      id,
+      title,
+      description,
+      event_date,
+      end_date,
+      location,
+      divisions ( id, name, category )
+    )
+  `)
+  .order("created_at", { ascending: false });
+```
+
+### 4.2. Generate QR Code di Web Peserta
+- Gunakan `qrcode.react`:
+  ```tsx
+  <QRCodeSVG value={ticket.qr_token} size={220} bgColor="#FFFFFF" fgColor="#18181b" level="M" />
+  ```
+- Jika `ticket.status === "present"`, tampilkan indikator **"Sudah Hadir"** beserta waktu `checked_in_at`.
+
+---
+
+## 5. Checklist Eksekusi Bertahap
+
+- [ ] **Step 1**: Buat migrasi `supabase/migrations/20261123100000_division_events_qr.sql` dan jalankan ke Supabase `nrjorfpizemjgtaajgvh`.
+- [ ] **Step 2**: Tambahkan `"events.manage"` di `utils/permissions.ts` dan menu **Acara Divisi** di `components/organisms/DashboardSidebar.tsx`.
+- [ ] **Step 3**: Implementasikan `/dashboard/acara` (`page.tsx`, `EventsPage.tsx`, `EventFormModal.tsx`) untuk pembuatan acara & auto-generate data tiket peserta per divisi.
+- [ ] **Step 4**: Install `html5-qrcode` dan implementasikan `/dashboard/acara/[id]` (`page.tsx`, `EventScannerPanel.tsx`, `EventAttendeeTable.tsx`).
+- [ ] **Step 5**: Verifikasi `npx tsc --noEmit`, `npm run lint`, dan uji alur end-to-end (buat acara -> cek baris `event_attendances` & `qr_token` di Supabase -> simulasi scan `check_in_event_qr`).
+

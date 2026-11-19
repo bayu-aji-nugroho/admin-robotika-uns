@@ -2,6 +2,10 @@
 
 import React, { useState } from "react";
 import { AlertCircle, BarChart3 } from "lucide-react";
+import {
+  AcademicDistributionCard,
+  AcademicStatItem,
+} from "@/components/organisms/AcademicDistributionCard";
 
 export interface DivisionStat {
   id: string;
@@ -16,6 +20,8 @@ export interface DivisionStat {
 export interface ApplicantStatistics {
   totals: { submitted: number; draft: number; booked: number; interviewed: number };
   divisions: DivisionStat[];
+  faculties?: AcademicStatItem[];
+  prodis?: AcademicStatItem[];
 }
 
 interface StatisticsPageProps {
@@ -217,6 +223,8 @@ export function StatisticsPage({ stats, error }: StatisticsPageProps) {
   const [scope, setScope] = useState<Scope>("submitted");
   const totals = stats?.totals;
   const divisions = stats?.divisions || [];
+  const faculties = stats?.faculties || [];
+  const prodis = stats?.prodis || [];
 
   return (
     <div className="flex-1 bg-[#F9F9F8] dark:bg-[#09090b] min-h-screen py-6 px-4 sm:px-8 transition-colors">
@@ -227,7 +235,7 @@ export function StatisticsPage({ stats, error }: StatisticsPageProps) {
             Statistik Pendaftar
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-            Sebaran divisi pilihan 1 dan pilihan 2 calon anggota.
+            Sebaran divisi pilihan 1 & 2, fakultas, dan program studi calon anggota.
           </p>
         </div>
 
@@ -283,6 +291,23 @@ export function StatisticsPage({ stats, error }: StatisticsPageProps) {
                 title="Divisi Pilihan 2"
                 divisions={divisions}
                 field={scope === "submitted" ? "p2_submitted" : "p2_all"}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <AcademicDistributionCard
+                key={`fakultas-${scope}`}
+                title="Persentase Fakultas Pendaftar"
+                sectionLabel="Per fakultas"
+                items={faculties}
+                field={scope}
+              />
+              <AcademicDistributionCard
+                key={`prodi-${scope}`}
+                title="Persentase Program Studi Pendaftar"
+                sectionLabel="Per program studi"
+                items={prodis}
+                field={scope}
               />
             </div>
           </>
