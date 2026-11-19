@@ -78,7 +78,7 @@ export default async function AcaraRoute() {
       title: ev.title,
       description: ev.description,
       division_id: ev.division_id,
-      division_name: divRel?.name || ev.division_id,
+      division_name: divRel?.name || ev.division_id || "Semua Divisi",
       division_category: divRel?.category || "-",
       target_scope: (ev.target_scope as EventTargetScope) || "accepted",
       event_date: ev.event_date,

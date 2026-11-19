@@ -11,12 +11,20 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/atoms/Button";
 
+type ScannedApplicant = {
+  full_name?: string;
+  nim?: string;
+  prodi?: string;
+  primary_division?: string | null;
+  secondary_division?: string | null;
+};
+
 interface ScanFeedback {
   kind: "success" | "warning" | "error";
   title: string;
   detail: string;
   /** Ditampilkan besar agar panitia bisa mencocokkan dengan KTM (cegah titip absen) */
-  applicant?: { full_name?: string; nim?: string; prodi?: string };
+  applicant?: ScannedApplicant;
 }
 
 // Getar singkat = berhasil, panjang = gagal, agar panitia tidak harus terus melihat layar
@@ -106,11 +114,7 @@ export function EventScannerPanel({
         ok?: boolean;
         code?: string;
         message?: string;
-        applicant?: {
-          full_name?: string;
-          nim?: string;
-          prodi?: string;
-        };
+        applicant?: ScannedApplicant;
       };
 
       let next: ScanFeedback;
@@ -283,6 +287,12 @@ export function EventScannerPanel({
                 <p className="text-base font-mono font-bold">{feedback.applicant.nim || "-"}</p>
                 {feedback.applicant.prodi && (
                   <p className="text-xs opacity-90">{feedback.applicant.prodi}</p>
+                )}
+                {(feedback.applicant.primary_division || feedback.applicant.secondary_division) && (
+                  <p className="text-xs opacity-90">
+                    Pilihan 1: {feedback.applicant.primary_division || "-"} · Pilihan 2:{" "}
+                    {feedback.applicant.secondary_division || "-"}
+                  </p>
                 )}
               </div>
             )}

@@ -25,8 +25,9 @@ export function EventFormModal({
   onCreated,
 }: EventFormModalProps) {
   const [title, setTitle] = useState("");
-  const [divisionId, setDivisionId] = useState(divisions[0]?.id || "");
-  const [targetScope, setTargetScope] = useState<EventTargetScope>("accepted");
+  // "" = Semua Divisi (disimpan NULL)
+  const [divisionId, setDivisionId] = useState("");
+  const [targetScope, setTargetScope] = useState<EventTargetScope>("open");
   const [eventDate, setEventDate] = useState(() =>
     toJakartaInputValue(new Date().toISOString())
   );
@@ -45,7 +46,7 @@ export function EventFormModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen, onClose]);
 
-  const selectedDivisionId = divisionId || divisions[0]?.id || "";
+  const selectedDivisionId = divisionId;
 
   if (!isOpen) return null;
 
@@ -58,11 +59,6 @@ export function EventFormModal({
       setError("Judul acara minimal 2 karakter.");
       return;
     }
-    if (!selectedDivisionId) {
-      setError("Pilih divisi penyelenggara acara.");
-      return;
-    }
-
     const startIso = fromJakartaInputValue(eventDate);
     if (!startIso) {
       setError("Tanggal & waktu mulai tidak valid.");
@@ -87,7 +83,7 @@ export function EventFormModal({
         "create_division_event",
         {
           p_title: trimmedTitle,
-          p_division_id: selectedDivisionId,
+          p_division_id: selectedDivisionId || null,
           p_event_date: startIso,
           p_target_scope: targetScope,
           p_description: description.trim() || null,
@@ -198,6 +194,7 @@ export function EventFormModal({
                 onChange={(e) => setDivisionId(e.target.value)}
                 className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden"
               >
+                <option value="">Semua Divisi</option>
                 {divisions.map((div) => (
                   <option key={div.id} value={div.id}>
                     {div.name}

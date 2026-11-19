@@ -17,6 +17,8 @@ interface EventAttendeeTableProps {
   eventId: string;
   attendees: EventAttendanceItem[];
   canManage: boolean;
+  /** Acara terbuka: tidak ada daftar awal, peserta muncul saat dipindai */
+  isOpenEvent?: boolean;
   onRefresh: () => Promise<void> | void;
 }
 
@@ -24,6 +26,7 @@ export function EventAttendeeTable({
   eventId,
   attendees,
   canManage,
+  isOpenEvent = false,
   onRefresh,
 }: EventAttendeeTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,7 +132,7 @@ export function EventAttendeeTable({
           </select>
         </div>
 
-        {canManage && (
+        {canManage && !isOpenEvent && (
           <button
             type="button"
             onClick={handleSyncAttendees}
@@ -178,6 +181,11 @@ export function EventAttendeeTable({
                       {row.applicant?.prodi && (
                         <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                           {row.applicant.prodi}
+                        </p>
+                      )}
+                      {row.applicant?.divisions && (
+                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                          {row.applicant.divisions}
                         </p>
                       )}
                     </td>
@@ -238,11 +246,17 @@ export function EventAttendeeTable({
       ) : (
         <div className="py-12 px-4 text-center space-y-1.5">
           <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
-            Belum ada data peserta untuk acara ini
+            {isOpenEvent ? "Belum ada yang di-scan" : "Belum ada data peserta untuk acara ini"}
           </p>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Klik &quot;Sinkronkan Anggota Divisi&quot; jika ada calon anggota baru
-            yang diterima atau mendaftar di divisi ini.
+            {isOpenEvent ? (
+              "Calon anggota muncul di sini setelah QR-nya dipindai."
+            ) : (
+              <>
+                Klik &quot;Sinkronkan Anggota Divisi&quot; jika ada calon anggota baru
+                yang diterima atau mendaftar di divisi ini.
+              </>
+            )}
           </p>
         </div>
       )}

@@ -10,6 +10,8 @@ import {
   DivisionEventSummary,
   EventAttendanceItem,
   TARGET_SCOPE_LABELS,
+  ATTENDANCE_SELECT,
+  mapAttendanceRow,
 } from "@/utils/divisionEvents.types";
 import { formatJakartaDateTime } from "@/utils/jakartaTime";
 
@@ -33,30 +35,12 @@ export function EventDetailPage({
     const supabase = createClient();
     const { data } = await supabase
       .from("event_attendances")
-      .select(
-        "id, event_id, applicant_id, qr_token, status, checked_in_at, checked_in_by, created_at, applicants(id, full_name, nim, prodi, fakultas)"
-      )
+      .select(ATTENDANCE_SELECT)
       .eq("event_id", event.id)
       .order("created_at", { ascending: true });
 
     if (data) {
-      const mapped: EventAttendanceItem[] = data.map((row) => {
-        const appRel = row.applicants as unknown as
-          | EventAttendanceItem["applicant"]
-          | null;
-        return {
-          id: row.id,
-          event_id: row.event_id,
-          applicant_id: row.applicant_id,
-          qr_token: row.qr_token,
-          status: row.status as EventAttendanceItem["status"],
-          checked_in_at: row.checked_in_at,
-          checked_in_by: row.checked_in_by,
-          created_at: row.created_at,
-          applicant: appRel,
-        };
-      });
-      setAttendees(mapped);
+      setAttendees(data.map(mapAttendanceRow));
     }
   }, [event.id]);
 
@@ -109,7 +93,9 @@ export function EventDetailPage({
             )}
             <span className="inline-flex items-center gap-1.5 font-mono font-semibold text-zinc-900 dark:text-zinc-100">
               <Users className="w-3.5 h-3.5 text-[#B22234] dark:text-rose-400" />
-              {presentCount} / {attendees.length} Hadir
+              {event.target_scope === "open"
+                ? `${presentCount} orang sudah absen`
+                : `${presentCount} / ${attendees.length} Hadir`}
             </span>
           </div>
         </div>
@@ -126,6 +112,7 @@ export function EventDetailPage({
           eventId={event.id}
           attendees={attendees}
           canManage={canManage}
+          isOpenEvent={event.target_scope === "open"}
           onRefresh={refreshAttendees}
         />
       </div>

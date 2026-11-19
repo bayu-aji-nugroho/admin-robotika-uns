@@ -43,7 +43,7 @@ export function EventsPage({
 
   const filteredEvents = useMemo(() => {
     if (selectedDivision === "all") return events;
-    return events.filter((ev) => ev.division_id === selectedDivision);
+    return events.filter((ev) => !ev.division_id || ev.division_id === selectedDivision);
   }, [events, selectedDivision]);
 
   const showToast = (msg: string) => {
@@ -202,6 +202,18 @@ export function EventsPage({
 
                   {/* Progress & Actions */}
                   <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-3">
+                    {/* Acara terbuka tidak punya daftar awal: total = yang hadir, jadi cukup jumlah hadir */}
+                    {ev.target_scope === "open" ? (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="inline-flex items-center gap-1.5 font-medium text-zinc-600 dark:text-zinc-400">
+                          <Users className="w-3.5 h-3.5" />
+                          Sudah Absen (scan QR)
+                        </span>
+                        <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100 tabular-nums">
+                          {ev.present_count} orang
+                        </span>
+                      </div>
+                    ) : (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="inline-flex items-center gap-1.5 font-medium text-zinc-600 dark:text-zinc-400">
@@ -219,6 +231,7 @@ export function EventsPage({
                         />
                       </div>
                     </div>
+                    )}
 
                     <div className="flex items-center justify-between gap-2">
                       {canManage ? (
