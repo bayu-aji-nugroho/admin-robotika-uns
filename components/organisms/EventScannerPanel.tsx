@@ -135,8 +135,11 @@ export function EventScannerPanel({
           title:
             res.code === "not_open" || res.code === "closed" || res.code === "inactive"
               ? "Presensi Tidak Aktif"
+              : res.code === "not_participant"
+              ? "Bukan Peserta Acara Ini"
               : "QR Tidak Valid",
           detail: res.message || "QR Code tidak terdaftar di acara ini.",
+          applicant: res.applicant,
         };
       }
       setFeedback(next);
