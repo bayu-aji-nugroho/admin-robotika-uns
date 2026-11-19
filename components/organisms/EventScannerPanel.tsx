@@ -15,6 +15,17 @@ interface ScanFeedback {
   kind: "success" | "warning" | "error";
   title: string;
   detail: string;
+  /** Ditampilkan besar agar panitia bisa mencocokkan dengan KTM (cegah titip absen) */
+  applicant?: { full_name?: string; nim?: string; prodi?: string };
+}
+
+// Getar singkat = berhasil, panjang = gagal, agar panitia tidak harus terus melihat layar
+function vibrate(kind: ScanFeedback["kind"]) {
+  try {
+    navigator.vibrate?.(kind === "success" ? 120 : [80, 60, 80, 60, 200]);
+  } catch {
+    // Perangkat tanpa getar: abaikan
+  }
 }
 
 interface EventScannerPanelProps {
@@ -102,30 +113,34 @@ export function EventScannerPanel({
         };
       };
 
-      const applicantLabel = res.applicant?.full_name
-        ? `${res.applicant.full_name} (${res.applicant.nim || "-"})`
-        : "Peserta";
-
+      let next: ScanFeedback;
       if (res.ok && res.code === "checked_in") {
-        setFeedback({
+        next = {
           kind: "success",
-          title: `Hadir: ${applicantLabel}`,
-          detail: res.applicant?.prodi || "Kehadiran berhasil dicatat.",
-        });
+          title: "Hadir",
+          detail: "Cocokkan nama & NIM dengan KTM peserta.",
+          applicant: res.applicant,
+        };
         onCheckedIn();
       } else if (res.code === "already_present") {
-        setFeedback({
+        next = {
           kind: "warning",
-          title: `Sudah Absen: ${applicantLabel}`,
+          title: "Sudah Absen",
           detail: "QR Code ini sudah dipindai sebelumnya.",
-        });
+          applicant: res.applicant,
+        };
       } else {
-        setFeedback({
+        next = {
           kind: "error",
-          title: "QR Tidak Valid",
+          title:
+            res.code === "not_open" || res.code === "closed" || res.code === "inactive"
+              ? "Presensi Tidak Aktif"
+              : "QR Tidak Valid",
           detail: res.message || "QR Code tidak terdaftar di acara ini.",
-        });
+        };
       }
+      setFeedback(next);
+      vibrate(next.kind);
     } catch {
       setFeedback({
         kind: "error",
@@ -254,9 +269,20 @@ export function EventScannerPanel({
           ) : (
             <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
           )}
-          <div>
+          <div className="min-w-0">
             <p className="font-bold">{feedback.title}</p>
-            <p className="text-xs opacity-90 mt-0.5">{feedback.detail}</p>
+            {feedback.applicant?.full_name && (
+              <div className="mt-1.5">
+                <p className="text-lg sm:text-xl font-extrabold leading-tight break-words">
+                  {feedback.applicant.full_name}
+                </p>
+                <p className="text-base font-mono font-bold">{feedback.applicant.nim || "-"}</p>
+                {feedback.applicant.prodi && (
+                  <p className="text-xs opacity-90">{feedback.applicant.prodi}</p>
+                )}
+              </div>
+            )}
+            <p className="text-xs opacity-90 mt-1">{feedback.detail}</p>
           </div>
         </div>
       )}

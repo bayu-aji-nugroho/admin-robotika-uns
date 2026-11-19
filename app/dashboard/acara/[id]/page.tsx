@@ -47,6 +47,12 @@ export default async function EventDetailRoute({ params }: PageProps) {
     redirect("/dashboard");
   }
 
+  const canManage = hasPermission(access, "events.manage");
+  // Sinkron otomatis: calon anggota yang baru diterima/mendaftar langsung dapat tiket
+  if (canManage) {
+    await supabase.rpc("sync_event_attendees", { p_event_id: eventId });
+  }
+
   const [eventResult, attendeesResult] = await Promise.all([
     supabase
       .from("division_events")
@@ -115,7 +121,7 @@ export default async function EventDetailRoute({ params }: PageProps) {
     <EventDetailPage
       event={summary}
       initialAttendees={attendees}
-      canManage={hasPermission(access, "events.manage")}
+      canManage={canManage}
     />
   );
 }
