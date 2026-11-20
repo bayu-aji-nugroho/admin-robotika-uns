@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { SidebarHeader } from "@/components/molecules/SidebarHeader";
 import { NavSection } from "@/components/molecules/NavSection";
 import { NavItem } from "@/components/atoms/NavItem";
-import { Sliders, Users, BarChart3, ShieldCheck, CalendarClock, BookOpen, Bell, Eye, QrCode, Briefcase } from "lucide-react";
+import { Sliders, Users, BarChart3, ShieldCheck, CalendarClock, BookOpen, Bell, Eye, QrCode, Briefcase, ClipboardCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { useLocalStorageValue } from "@/utils/useLocalStorageValue";
@@ -243,6 +243,15 @@ export function DashboardSidebar({
             icon={Briefcase}
             href="/dashboard/magang"
             isActive={currentPath.startsWith("/dashboard/magang")}
+            isCollapsed={isCollapsed}
+          />
+
+          {/* Penilaian calon anggota per divisi Pilihan 1 */}
+          <NavItem
+            label="Penilaian"
+            icon={ClipboardCheck}
+            href="/dashboard/penilaian"
+            isActive={currentPath.startsWith("/dashboard/penilaian")}
             isCollapsed={isCollapsed}
           />
 
