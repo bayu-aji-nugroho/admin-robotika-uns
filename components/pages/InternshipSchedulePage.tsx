@@ -4,6 +4,10 @@ import React, { useState } from "react";
 import { Briefcase, MapPin, Plus, Trash2, Loader2, X } from "lucide-react";
 import { ApplicantSearchPicker, type PickedApplicant } from "@/components/organisms/ApplicantSearchPicker";
 import { createClient } from "@/utils/supabase/client";
+import { ATTENDANCE_BADGE_CLASS, ATTENDANCE_LABELS, type AttendanceStatus } from "@/utils/divisionEvents.types";
+
+type MagangStatus = Exclude<AttendanceStatus, "pending">;
+const MAGANG_OPTIONS: MagangStatus[] = ["present", "late", "excused", "absent"];
 import { formatJakartaDateTime, fromJakartaInputValue } from "@/utils/jakartaTime";
 
 interface DivisionItem {
@@ -19,9 +23,11 @@ interface ScheduleItem {
   location: string;
 }
 
-interface ExcuseItem {
+/** Kehadiran tercatat untuk satu jadwal (izin, terlambat, alpha, hadir) */
+export interface ExcuseItem {
   schedule_id: string;
   applicant_id: string;
+  status: MagangStatus;
   full_name: string | null;
   nim: string | null;
 }
@@ -94,20 +100,26 @@ export function InternshipSchedulePage({
     setSchedules((prev) => prev.filter((s) => s.id !== item.id));
   };
 
-  const addExcuse = async (scheduleId: string, a: PickedApplicant) => {
-    if (excuses.some((x) => x.schedule_id === scheduleId && x.applicant_id === a.id)) return;
+  // Tambah lewat pencarian = Izin; statusnya bisa diganti (Terlambat, Alpha, Hadir) di daftar
+  const setAttendance = async (scheduleId: string, a: PickedApplicant, status: MagangStatus) => {
     setError(null);
     const { error: err } = await createClient()
-      .from("internship_excuses")
-      .insert({ schedule_id: scheduleId, applicant_id: a.id });
+      .from("internship_attendance")
+      .upsert(
+        { schedule_id: scheduleId, applicant_id: a.id, status, updated_at: new Date().toISOString() },
+        { onConflict: "schedule_id,applicant_id" }
+      );
     if (err) return setError(err.message);
-    setExcuses((prev) => [...prev, { schedule_id: scheduleId, applicant_id: a.id, full_name: a.full_name, nim: a.nim }]);
+    setExcuses((prev) => [
+      ...prev.filter((x) => !(x.schedule_id === scheduleId && x.applicant_id === a.id)),
+      { schedule_id: scheduleId, applicant_id: a.id, status, full_name: a.full_name, nim: a.nim },
+    ]);
   };
 
   const removeExcuse = async (x: ExcuseItem) => {
     setError(null);
     const { error: err } = await createClient()
-      .from("internship_excuses")
+      .from("internship_attendance")
       .delete()
       .eq("schedule_id", x.schedule_id)
       .eq("applicant_id", x.applicant_id);
@@ -232,7 +244,7 @@ export function InternshipSchedulePage({
                     const list = excuses.filter((x) => x.schedule_id === s.id);
                     return (
                       <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-1.5">
-                        <p className="font-semibold text-zinc-700 dark:text-zinc-300">Izin ({list.length})</p>
+                        <p className="font-semibold text-zinc-700 dark:text-zinc-300">Izin / Catatan Kehadiran ({list.length})</p>
                         {list.length > 0 && (
                           <ul className="space-y-1">
                             {list.map((x) => (
@@ -240,11 +252,35 @@ export function InternshipSchedulePage({
                                 <span className="min-w-0 truncate text-zinc-800 dark:text-zinc-200">
                                   {x.full_name || "-"} <span className="font-mono text-zinc-500">{x.nim || ""}</span>
                                 </span>
+                                {canManage ? (
+                                  <select
+                                    value={x.status}
+                                    onChange={(e) =>
+                                      setAttendance(
+                                        s.id,
+                                        { id: x.applicant_id, full_name: x.full_name, nim: x.nim },
+                                        e.target.value as MagangStatus
+                                      )
+                                    }
+                                    aria-label={`Status ${x.full_name || ""}`}
+                                    className={`ml-auto px-1.5 py-0.5 rounded font-semibold border-0 cursor-pointer ${ATTENDANCE_BADGE_CLASS[x.status]}`}
+                                  >
+                                    {MAGANG_OPTIONS.map((st) => (
+                                      <option key={st} value={st}>
+                                        {ATTENDANCE_LABELS[st]}
+                                      </option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <span className={`ml-auto px-1.5 py-0.5 rounded font-semibold ${ATTENDANCE_BADGE_CLASS[x.status]}`}>
+                                    {ATTENDANCE_LABELS[x.status]}
+                                  </span>
+                                )}
                                 {canManage && (
                                   <button
                                     type="button"
                                     onClick={() => removeExcuse(x)}
-                                    aria-label={`Hapus izin ${x.full_name || ""}`}
+                                    aria-label={`Hapus catatan kehadiran ${x.full_name || ""}`}
                                     className="p-1 -m-1 rounded text-zinc-400 hover:text-rose-600 cursor-pointer"
                                   >
                                     <X className="w-3.5 h-3.5" />
@@ -257,7 +293,7 @@ export function InternshipSchedulePage({
                         {canManage && (
                           <ApplicantSearchPicker
                             placeholder="Tambah izin: nama / NIM"
-                            onPick={(a) => addExcuse(s.id, a)}
+                            onPick={(a) => setAttendance(s.id, a, "excused")}
                           />
                         )}
                       </div>

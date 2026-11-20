@@ -25,12 +25,34 @@ export interface DivisionEventSummary {
   present_count: number;
 }
 
+/** Status kehadiran acara & jadwal magang ("pending" = belum dicatat) */
+export type AttendanceStatus = "pending" | "present" | "late" | "excused" | "absent";
+
+export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
+  pending: "Belum Hadir",
+  present: "Hadir",
+  late: "Terlambat",
+  excused: "Izin",
+  absent: "Alpha",
+};
+
+export const ATTENDANCE_BADGE_CLASS: Record<AttendanceStatus, string> = {
+  pending: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300",
+  present: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
+  late: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
+  excused: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400",
+  absent: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400",
+};
+
+/** Hadir & Terlambat sama-sama dihitung datang */
+export const isAttended = (status: AttendanceStatus | null | undefined) => status === "present" || status === "late";
+
 export interface EventAttendanceItem {
   id: string;
   event_id: string;
   applicant_id: string;
   qr_token: string;
-  status: "pending" | "present" | "excused";
+  status: AttendanceStatus;
   checked_in_at: string | null;
   checked_in_by: string | null;
   created_at: string;

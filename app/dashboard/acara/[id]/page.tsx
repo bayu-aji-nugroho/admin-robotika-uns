@@ -7,6 +7,7 @@ import { getAdminAccess, hasPermission } from "@/utils/adminAccess";
 import {
   ATTENDANCE_SELECT,
   mapAttendanceRow,
+  isAttended,
   type DivisionEventSummary,
   type EventAttendanceItem,
   type EventTargetScope,
@@ -99,7 +100,7 @@ export default async function EventDetailRoute({ params }: PageProps) {
     created_by: ev.created_by,
     created_at: ev.created_at,
     total_attendees: attendees.length,
-    present_count: attendees.filter((a) => a.status === "present").length,
+    present_count: attendees.filter((a) => isAttended(a.status)).length,
   };
 
   return (

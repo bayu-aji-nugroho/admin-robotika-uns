@@ -1,18 +1,17 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import {
-  Search,
-  RefreshCw,
-  CheckCircle2,
-  Clock,
-  UserCheck,
-  X,
-  FileX,
-} from "lucide-react";
+import { Search, RefreshCw, X, FileX } from "lucide-react";
 import { ApplicantSearchPicker, type PickedApplicant } from "@/components/organisms/ApplicantSearchPicker";
 import { createClient } from "@/utils/supabase/client";
-import { EventAttendanceItem } from "@/utils/divisionEvents.types";
+import {
+  ATTENDANCE_BADGE_CLASS,
+  ATTENDANCE_LABELS,
+  type AttendanceStatus,
+  type EventAttendanceItem,
+} from "@/utils/divisionEvents.types";
+
+const STATUS_ORDER: AttendanceStatus[] = ["pending", "present", "late", "excused", "absent"];
 import { formatJakartaDateTime } from "@/utils/jakartaTime";
 
 interface EventAttendeeTableProps {
@@ -32,12 +31,10 @@ export function EventAttendeeTable({
   onRefresh,
 }: EventAttendeeTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "present" | "pending" | "excused">(
-    "all"
-  );
-  const [excuseError, setExcuseError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | AttendanceStatus>("all");
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -67,44 +64,18 @@ export function EventAttendeeTable({
     }
   };
 
-  // Izin: dicari lewat nama/NIM; batal izin mengembalikan ke Belum Hadir (acara terbuka: dihapus)
-  const setExcused = async (applicantId: string, excused: boolean) => {
-    setExcuseError(null);
-    const { error } = await createClient().rpc("set_event_excused", {
+  // Ubah status manual (tanpa batas jam scan). "Belum Hadir" mengosongkan; acara terbuka: baris dihapus
+  const setStatus = async (applicantId: string, status: AttendanceStatus) => {
+    setStatusError(null);
+    setSavingId(applicantId);
+    const { error } = await createClient().rpc("set_event_attendance", {
       p_event_id: eventId,
       p_applicant_id: applicantId,
-      p_excused: excused,
+      p_status: status,
     });
-    if (error) setExcuseError(error.message);
+    setSavingId(null);
+    if (error) setStatusError(error.message);
     await onRefresh();
-  };
-
-  const handleManualToggle = async (row: EventAttendanceItem) => {
-    if (!canManage || togglingId) return;
-    try {
-      setTogglingId(row.id);
-      const supabase = createClient();
-
-      if (row.status === "present") {
-        await supabase
-          .from("event_attendances")
-          .update({
-            status: "pending",
-            checked_in_at: null,
-            checked_in_by: null,
-          })
-          .eq("id", row.id);
-      } else {
-        await supabase.rpc("check_in_event_qr", {
-          p_event_id: eventId,
-          p_qr_token: row.qr_token,
-        });
-      }
-
-      await onRefresh();
-    } finally {
-      setTogglingId(null);
-    }
   };
 
   return (
@@ -136,15 +107,17 @@ export function EventAttendeeTable({
           <select
             value={statusFilter}
             onChange={(e) =>
-              setStatusFilter(e.target.value as "all" | "present" | "pending" | "excused")
+              setStatusFilter(e.target.value as "all" | AttendanceStatus)
             }
             aria-label="Filter status kehadiran"
             className="px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700/70 rounded-lg text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden cursor-pointer"
           >
             <option value="all">Semua ({attendees.length})</option>
-            <option value="present">Sudah Hadir</option>
-            <option value="excused">Izin</option>
-            <option value="pending">Belum Hadir</option>
+            {STATUS_ORDER.map((st) => (
+              <option key={st} value={st}>
+                {ATTENDANCE_LABELS[st]}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -172,15 +145,15 @@ export function EventAttendeeTable({
           <div className="max-w-md">
             <ApplicantSearchPicker
               placeholder="Cari nama atau NIM yang izin..."
-              onPick={(a: PickedApplicant) => setExcused(a.id, true)}
+              onPick={(a: PickedApplicant) => setStatus(a.id, "excused")}
             />
           </div>
-          {excuseError && (
-            <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
-              {excuseError}
-            </p>
-          )}
         </div>
+      )}
+      {statusError && (
+        <p role="alert" className="px-4 py-2 text-xs text-rose-600 dark:text-rose-400">
+          {statusError}
+        </p>
       )}
 
       {/* Tabel Peserta & Data Tiket QR */}
@@ -195,14 +168,12 @@ export function EventAttendeeTable({
                 <th className="py-3 px-4">Token Tiket</th>
                 <th className="py-3 px-4 w-44">Status Kehadiran</th>
                 {canManage && (
-                  <th className="py-3 px-4 text-right w-36">Aksi Manual</th>
+                  <th className="py-3 px-4 text-right w-40">Ubah Status</th>
                 )}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/60 text-xs sm:text-sm">
               {filtered.map((row, idx) => {
-                const isPresent = row.status === "present";
-                const isExcused = row.status === "excused";
                 return (
                   <tr
                     key={row.id}
@@ -238,56 +209,34 @@ export function EventAttendeeTable({
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      {isPresent ? (
-                        <div className="space-y-0.5">
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Hadir
-                          </span>
-                          {row.checked_in_at && (
-                            <p className="text-[10px] text-zinc-400 font-mono">
-                              {formatJakartaDateTime(row.checked_in_at)}
-                            </p>
-                          )}
-                        </div>
-                      ) : isExcused ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 dark:text-sky-400">
-                          <FileX className="w-3.5 h-3.5" />
-                          Izin
+                      <div className="space-y-0.5">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${ATTENDANCE_BADGE_CLASS[row.status]}`}
+                        >
+                          {ATTENDANCE_LABELS[row.status]}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-                          <Clock className="w-3.5 h-3.5" />
-                          Belum Hadir
-                        </span>
-                      )}
+                        {row.checked_in_at && (row.status === "present" || row.status === "late") && (
+                          <p className="text-[10px] text-zinc-400 font-mono">
+                            {formatJakartaDateTime(row.checked_in_at)}
+                          </p>
+                        )}
+                      </div>
                     </td>
                     {canManage && (
                       <td className="py-3 px-4 text-right">
-                        {isExcused ? (
-                          <button
-                            type="button"
-                            onClick={() => setExcused(row.applicant_id, false)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>Batal Izin</span>
-                          </button>
-                        ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleManualToggle(row)}
-                          disabled={togglingId === row.id}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border transition-colors cursor-pointer disabled:opacity-50 ${
-                            isPresent
-                              ? "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                              : "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-950/70"
-                          }`}
+                        <select
+                          value={row.status}
+                          disabled={savingId === row.applicant_id}
+                          onChange={(e) => setStatus(row.applicant_id, e.target.value as AttendanceStatus)}
+                          aria-label={`Status kehadiran ${row.applicant?.full_name || ""}`}
+                          className="px-2 py-1 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-md text-xs text-zinc-900 dark:text-zinc-100 cursor-pointer disabled:opacity-50"
                         >
-                          <UserCheck className="w-3.5 h-3.5" />
-                          <span>{isPresent ? "Batalkan" : "Tandai Hadir"}</span>
-                        </button>
-                        )}
+                          {STATUS_ORDER.map((st) => (
+                            <option key={st} value={st}>
+                              {ATTENDANCE_LABELS[st]}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                     )}
                   </tr>

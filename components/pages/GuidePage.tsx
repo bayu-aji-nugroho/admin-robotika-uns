@@ -455,18 +455,19 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Catat peserta izin",
         detail:
-          "Di kolom “Tambah peserta izin”, ketik nama atau NIM lalu pilih orangnya. Statusnya menjadi Izin; klik Batal Izin bila salah. Peserta yang sudah Hadir tidak bisa ditandai izin.",
+          "Di kolom “Tambah peserta izin”, ketik nama atau NIM lalu pilih orangnya; statusnya menjadi Izin.",
       },
       {
-        title: "Koreksi manual",
-        detail: "Lupa scan atau HP calon bermasalah? Gunakan Tandai Hadir di baris peserta (atau Batalkan bila salah tandai).",
+        title: "Ubah status kehadiran",
+        detail:
+          "Di kolom Ubah Status tiap baris, pilih Hadir, Terlambat, Izin, Alpha, atau Belum Hadir (mengosongkan). Bisa dipakai kapan saja, termasuk di luar jam scan, mis. lupa scan atau datang terlambat.",
       },
     ],
     statuses: [
       {
         group: "Hasil scan",
         items: [
-          { label: "Hadir", tone: "ok", meaning: "Kehadiran tercatat. Cocokkan nama & NIM dengan KTM." },
+          { label: "Hadir", tone: "ok", meaning: "Kehadiran tercatat. Cocokkan nama & NIM dengan KTM; ubah ke Terlambat lewat kolom Ubah Status bila perlu." },
           { label: "Sudah Absen", tone: "warn", meaning: "QR ini sudah dipindai sebelumnya; tidak tercatat dua kali." },
           { label: "Bukan Peserta Acara Ini", tone: "neutral", meaning: "Calon di luar divisi/cakupan acara (acara bercakupan)." },
           { label: "Presensi Tidak Aktif", tone: "neutral", meaning: "Di luar jam scan (1 jam sebelum mulai s.d. 1 jam setelah selesai) atau acara dinonaktifkan." },
@@ -498,8 +499,9 @@ const SECTIONS: GuideSection[] = [
         detail: "Pilih “Semua Divisi Teknis (Werkudara & Cakrawala)” agar satu jadwal langsung tampil untuk keenam divisi teknis.",
       },
       {
-        title: "Catat peserta izin",
-        detail: "Di kotak jadwal, ketik nama atau NIM pada “Tambah izin” lalu pilih orangnya. Klik ✕ untuk menghapus izin.",
+        title: "Catat izin & status kehadiran",
+        detail:
+          "Di kotak jadwal, ketik nama atau NIM pada “Tambah izin” lalu pilih orangnya (tercatat Izin). Statusnya bisa diganti ke Terlambat, Alpha, atau Hadir lewat dropdown di sebelah nama; klik ✕ untuk menghapus catatan.",
       },
       {
         title: "Hapus jadwal",
@@ -524,7 +526,7 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Kolom pertemuan otomatis",
         detail:
-          "Setiap Jadwal Magang dan Acara divisi itu (termasuk acara Semua Divisi) langsung menjadi kolom. Kolom acara terisi dari scan QR & izin acara; kolom magang diisi dengan klik sel (Alpha → Hadir → Izin).",
+          "Setiap Jadwal Magang dan Acara divisi itu (termasuk acara Semua Divisi) langsung menjadi kolom. Kolom acara terisi dari scan QR & status di halaman acara; kolom magang diisi lewat dropdown di sel (Hadir, Terlambat, Izin, Alpha).",
       },
       {
         title: "Tambah item penilaian",
@@ -541,8 +543,9 @@ const SECTIONS: GuideSection[] = [
         group: "Kehadiran pertemuan",
         items: [
           { label: "Hadir", tone: "ok", meaning: "Dipindai di acara, atau ditandai hadir di magang." },
+          { label: "Terlambat", tone: "warn", meaning: "Datang terlambat; tetap dihitung hadir di kolom Hadir x/y." },
           { label: "Izin", tone: "neutral", meaning: "Dicatat izin di halaman acara/jadwal magang atau di tabel ini." },
-          { label: "Alpha", tone: "warn", meaning: "Pertemuan sudah lewat tanpa hadir maupun izin." },
+          { label: "Alpha", tone: "neutral", meaning: "Ditandai Alpha, atau pertemuan sudah lewat tanpa catatan kehadiran." },
           { label: "–", tone: "past", meaning: "Pertemuan belum berlangsung." },
         ],
       },

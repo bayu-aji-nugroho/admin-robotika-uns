@@ -62,7 +62,7 @@ export default async function AcaraRoute() {
   for (const row of attendancesResult.data || []) {
     const entry = statsMap.get(row.event_id) || { total: 0, present: 0 };
     entry.total += 1;
-    if (row.status === "present") entry.present += 1;
+    if (row.status === "present" || row.status === "late") entry.present += 1;
     statsMap.set(row.event_id, entry);
   }
 

@@ -1,4 +1,4 @@
-import { InternshipSchedulePage } from "@/components/pages/InternshipSchedulePage";
+import { InternshipSchedulePage, type ExcuseItem } from "@/components/pages/InternshipSchedulePage";
 import { createClient } from "@/utils/supabase/server";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
@@ -50,11 +50,17 @@ export default async function MagangRoute() {
       .select("internship_division")
       .eq("email", user.email.toLowerCase().trim())
       .maybeSingle(),
-    supabase.from("internship_excuses").select("schedule_id, applicant_id, applicants(full_name, nim)"),
+    supabase.from("internship_attendance").select("schedule_id, applicant_id, status, applicants(full_name, nim)"),
   ]);
   const initialExcuses = (excusesResult.data || []).map((e) => {
     const app = e.applicants as unknown as { full_name: string | null; nim: string | null } | null;
-    return { schedule_id: e.schedule_id, applicant_id: e.applicant_id, full_name: app?.full_name ?? null, nim: app?.nim ?? null };
+    return {
+      schedule_id: e.schedule_id,
+      applicant_id: e.applicant_id,
+      status: e.status as ExcuseItem["status"],
+      full_name: app?.full_name ?? null,
+      nim: app?.nim ?? null,
+    };
   });
 
   return (

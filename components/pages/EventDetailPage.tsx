@@ -12,6 +12,7 @@ import {
   TARGET_SCOPE_LABELS,
   ATTENDANCE_SELECT,
   mapAttendanceRow,
+  isAttended,
 } from "@/utils/divisionEvents.types";
 import { formatJakartaDateTime } from "@/utils/jakartaTime";
 
@@ -29,7 +30,7 @@ export function EventDetailPage({
   const [attendees, setAttendees] =
     useState<EventAttendanceItem[]>(initialAttendees);
 
-  const presentCount = attendees.filter((a) => a.status === "present").length;
+  const presentCount = attendees.filter((a) => isAttended(a.status)).length;
 
   const refreshAttendees = useCallback(async () => {
     const supabase = createClient();

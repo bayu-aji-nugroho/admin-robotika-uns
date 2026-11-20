@@ -3,6 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { ClipboardCheck, Loader2, MessageSquare, Plus, Trash2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import {
+  ATTENDANCE_BADGE_CLASS,
+  ATTENDANCE_LABELS,
+  isAttended,
+  type AttendanceStatus,
+} from "@/utils/divisionEvents.types";
 
 interface DivisionItem {
   id: string;
@@ -18,7 +24,8 @@ interface GradebookPageProps {
   canMarkAttendance: boolean;
 }
 
-type Attendance = "present" | "excused" | "absent";
+type Attendance = Exclude<AttendanceStatus, "pending">;
+const MAGANG_OPTIONS: Attendance[] = ["present", "late", "excused", "absent"];
 
 interface Candidate {
   id: string;
@@ -84,12 +91,9 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
   const eventIds = (events.data || []).map((e) => e.id);
   const itemIds = (items.data || []).map((i) => i.id);
 
-  const [excuses, presence, attendances, scores] = await Promise.all([
+  const [magang, attendances, scores] = await Promise.all([
     scheduleIds.length
-      ? supabase.from("internship_excuses").select("schedule_id, applicant_id").in("schedule_id", scheduleIds)
-      : { data: [] },
-    scheduleIds.length
-      ? supabase.from("internship_presence").select("schedule_id, applicant_id").in("schedule_id", scheduleIds)
+      ? supabase.from("internship_attendance").select("schedule_id, applicant_id, status").in("schedule_id", scheduleIds)
       : { data: [] },
     eventIds.length
       ? supabase.from("event_attendances").select("event_id, applicant_id, status").in("event_id", eventIds)
@@ -100,10 +104,9 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
   ]);
 
   const attendance: Record<string, Attendance> = {};
-  for (const p of presence.data || []) attendance[`magang-${p.schedule_id}:${p.applicant_id}`] = "present";
-  for (const x of excuses.data || []) attendance[`magang-${x.schedule_id}:${x.applicant_id}`] = "excused";
+  for (const m of magang.data || []) attendance[`magang-${m.schedule_id}:${m.applicant_id}`] = m.status as Attendance;
   for (const a of attendances.data || []) {
-    if (a.status === "present" || a.status === "excused") attendance[`acara-${a.event_id}:${a.applicant_id}`] = a.status;
+    if (a.status !== "pending") attendance[`acara-${a.event_id}:${a.applicant_id}`] = a.status as Attendance;
   }
 
   const scoreMap: Record<string, Score> = {};
@@ -131,12 +134,6 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
   return { divisionId, candidates, meetings, attendance, items: items.data || [], scores: scoreMap };
 }
 
-const ATTENDANCE_LABEL: Record<Attendance, string> = { present: "Hadir", excused: "Izin", absent: "Alpha" };
-const ATTENDANCE_CLASS: Record<Attendance, string> = {
-  present: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
-  excused: "bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-400",
-  absent: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400",
-};
 
 /** Tabel penilaian per divisi Pilihan 1: kehadiran pertemuan + item nilai buatan admin. */
 export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAttendance }: GradebookPageProps) {
@@ -169,29 +166,24 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
 
   const update = (fn: (d: GradebookData) => GradebookData) => setData((d) => (d ? fn(d) : d));
 
-  // Klik sel magang: Alpha -> Hadir -> Izin -> Alpha
-  const cycleMagang = async (m: Meeting, applicantId: string) => {
-    if (!data) return;
+  // Status magang dipilih admin; "" = kosongkan (lewat jadwal tetap terhitung Alpha)
+  const setMagang = async (m: Meeting, applicantId: string, value: Attendance | "") => {
     const key = `${m.key}:${applicantId}`;
-    const current = data.attendance[key] || "absent";
-    const next: Attendance = current === "absent" ? "present" : current === "present" ? "excused" : "absent";
     const supabase = createClient();
-    const match = { schedule_id: m.id, applicant_id: applicantId };
     setError(null);
-    const results = await Promise.all([
-      next === "present"
-        ? supabase.from("internship_presence").insert(match)
-        : supabase.from("internship_presence").delete().match(match),
-      next === "excused"
-        ? supabase.from("internship_excuses").insert(match)
-        : supabase.from("internship_excuses").delete().match(match),
-    ]);
-    const failed = results.find((r) => r.error);
-    if (failed?.error) return setError(failed.error.message);
+    const { error: err } = value
+      ? await supabase
+          .from("internship_attendance")
+          .upsert(
+            { schedule_id: m.id, applicant_id: applicantId, status: value, updated_at: new Date().toISOString() },
+            { onConflict: "schedule_id,applicant_id" }
+          )
+      : await supabase.from("internship_attendance").delete().match({ schedule_id: m.id, applicant_id: applicantId });
+    if (err) return setError(err.message);
     update((d) => {
       const attendance = { ...d.attendance };
-      if (next === "absent") delete attendance[key];
-      else attendance[key] = next;
+      if (value) attendance[key] = value;
+      else delete attendance[key];
       return { ...d, attendance };
     });
   };
@@ -359,7 +351,7 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
               <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/60">
                 {data.candidates.map((c, idx) => {
                   const done = data.meetings.filter((m) => attendanceOf(m, c.id) !== null);
-                  const present = done.filter((m) => attendanceOf(m, c.id) === "present").length;
+                  const present = done.filter((m) => isAttended(attendanceOf(m, c.id))).length;
                   const values = data.items
                     .map((i) => data.scores[`${i.id}:${c.id}`]?.score)
                     .filter((v): v is number => typeof v === "number");
@@ -374,8 +366,8 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
                       {data.meetings.map((m) => {
                         const status = attendanceOf(m, c.id);
                         const badge = status ? (
-                          <span className={`inline-block px-2 py-0.5 rounded font-semibold ${ATTENDANCE_CLASS[status]}`}>
-                            {ATTENDANCE_LABEL[status]}
+                          <span className={`inline-block px-2 py-0.5 rounded font-semibold ${ATTENDANCE_BADGE_CLASS[status]}`}>
+                            {ATTENDANCE_LABELS[status]}
                           </span>
                         ) : (
                           <span className="text-zinc-300 dark:text-zinc-600">–</span>
@@ -383,14 +375,21 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
                         return (
                           <td key={m.key} className="py-2 px-2 text-center">
                             {m.kind === "magang" && canMarkAttendance ? (
-                              <button
-                                type="button"
-                                onClick={() => cycleMagang(m, c.id)}
-                                title="Klik untuk ganti: Alpha → Hadir → Izin"
-                                className="cursor-pointer"
+                              <select
+                                value={data.attendance[`${m.key}:${c.id}`] || ""}
+                                onChange={(e) => setMagang(m, c.id, e.target.value as Attendance | "")}
+                                aria-label={`Kehadiran ${m.label} ${c.full_name || ""}`}
+                                className={`px-1.5 py-0.5 rounded font-semibold border-0 cursor-pointer ${
+                                  status ? ATTENDANCE_BADGE_CLASS[status] : "bg-zinc-50 text-zinc-400 dark:bg-zinc-900"
+                                }`}
                               >
-                                {status ? badge : <span className="text-zinc-400 underline decoration-dotted">isi</span>}
-                              </button>
+                                <option value="">{status === "absent" ? "Alpha" : "–"}</option>
+                                {MAGANG_OPTIONS.map((st) => (
+                                  <option key={st} value={st}>
+                                    {ATTENDANCE_LABELS[st]}
+                                  </option>
+                                ))}
+                              </select>
                             ) : (
                               badge
                             )}
