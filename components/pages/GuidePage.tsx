@@ -4,6 +4,9 @@ import Link from "next/link";
 import {
   BarChart3,
   Bell,
+  Briefcase,
+  ClipboardCheck,
+  QrCode,
   ListChecks,
   BookOpen,
   CalendarClock,
@@ -201,7 +204,7 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Pengecualian login SSO",
         detail:
-          "Calon anggota wajib login dengan email @student.uns.ac.id. Bila akun SSO seseorang bermasalah, tambahkan email penggantinya (mis. Gmail) di kartu “Pengecualian Login SSO”. Ia lalu login lewat tautan “Masuk dengan akun email biasa” di website; email lain tetap ditolak. Verifikasi NIM-nya secara manual.",
+          "Calon anggota wajib login dengan email @student.uns.ac.id. Bila akun SSO seseorang bermasalah, tambahkan email penggantinya (mis. Gmail) di kartu “Pengecualian Login SSO”. Ia lalu login lewat tautan “Masuk dengan akun email biasa” di website; email lain tetap ditolak. Verifikasi NIM-nya secara manual. Saat pendaftaran ditutup, hanya akun yang sudah mengirim pendaftaran yang bisa login; email di daftar ini tetap bisa login (berguna untuk akun uji panitia).",
       },
       {
         title: "Kelola bank pertanyaan",
@@ -424,6 +427,127 @@ const SECTIONS: GuideSection[] = [
       "Daftar diperbarui otomatis saat Anda kembali dari tab lembar wawancara.",
       "Bila calon mengganti jadwal sebelum Accept, lokasi yang sudah dicatat ikut dikosongkan karena jamnya berubah.",
     ],
+  },
+  {
+    id: "acara",
+    title: "Acara Divisi & Presensi QR",
+    icon: QrCode,
+    href: "/dashboard/acara",
+    requires: "Kelola acara divisi (membuat, scan & izin); Lihat pendaftar (melihat)",
+    intro:
+      "Setiap calon anggota yang sudah mengirim pendaftaran punya satu QR presensi tetap di Dashboard website (tombol QR). Panitia memindai QR itu di halaman acara untuk mencatat kehadiran.",
+    steps: [
+      {
+        title: "Tambah acara",
+        detail:
+          "Klik Tambah Acara, isi judul, divisi (pilih “Semua Divisi” untuk acara umum), jam mulai/selesai, dan lokasi.",
+      },
+      {
+        title: "Pilih cakupan peserta",
+        detail:
+          "“Semua Calon Anggota” (bawaan): tabel kosong dulu, orang masuk saat QR-nya dipindai. Cakupan lain (Diterima, Pilihan 1, Semua Pendaftar) membuat daftar peserta dari awal dengan status Belum Hadir; calon anggota baru otomatis ikut saat halaman acara dibuka.",
+      },
+      {
+        title: "Scan QR",
+        detail:
+          "Buka detail acara, klik Aktifkan Kamera (izinkan kamera di browser), lalu arahkan ke QR yang ditampilkan calon anggota layar penuh. Layar menampilkan nama, NIM, prodi, dan Pilihan 1/2 — cocokkan dengan KTM agar tidak ada titip absen.",
+      },
+      {
+        title: "Catat peserta izin",
+        detail:
+          "Di kolom “Tambah peserta izin”, ketik nama atau NIM lalu pilih orangnya. Statusnya menjadi Izin; klik Batal Izin bila salah. Peserta yang sudah Hadir tidak bisa ditandai izin.",
+      },
+      {
+        title: "Koreksi manual",
+        detail: "Lupa scan atau HP calon bermasalah? Gunakan Tandai Hadir di baris peserta (atau Batalkan bila salah tandai).",
+      },
+    ],
+    statuses: [
+      {
+        group: "Hasil scan",
+        items: [
+          { label: "Hadir", tone: "ok", meaning: "Kehadiran tercatat. Cocokkan nama & NIM dengan KTM." },
+          { label: "Sudah Absen", tone: "warn", meaning: "QR ini sudah dipindai sebelumnya; tidak tercatat dua kali." },
+          { label: "Bukan Peserta Acara Ini", tone: "neutral", meaning: "Calon di luar divisi/cakupan acara (acara bercakupan)." },
+          { label: "Presensi Tidak Aktif", tone: "neutral", meaning: "Di luar jam scan (1 jam sebelum mulai s.d. 1 jam setelah selesai) atau acara dinonaktifkan." },
+        ],
+      },
+    ],
+    tips: [
+      "Tanpa jam selesai, scan diterima sampai 12 jam setelah acara mulai.",
+      "Minta calon anggota menaikkan kecerahan layar dan menyimpan screenshot QR bila sinyal di lokasi lemah.",
+      "Kehadiran acara otomatis masuk ke tab Penilaian divisi terkait.",
+    ],
+  },
+  {
+    id: "magang",
+    title: "Jadwal Magang",
+    icon: Briefcase,
+    href: "/dashboard/magang",
+    requires: "Kelola acara divisi (menambah & izin); Lihat pendaftar (melihat)",
+    intro:
+      "Tanggal, jam, dan tempat magang per divisi. Calon anggota melihat jadwal divisi Pilihan 1-nya dalam bentuk kotak-kotak di Dashboard website.",
+    steps: [
+      {
+        title: "Tambah jadwal",
+        detail:
+          "Divisi otomatis terpilih sesuai role panitia Anda. Isi tanggal & jam (WIB) dan tempat, lalu klik Tambah Jadwal. Satu jadwal = satu pertemuan.",
+      },
+      {
+        title: "Jadwal untuk semua divisi teknis",
+        detail: "Pilih “Semua Divisi Teknis (Werkudara & Cakrawala)” agar satu jadwal langsung tampil untuk keenam divisi teknis.",
+      },
+      {
+        title: "Catat peserta izin",
+        detail: "Di kotak jadwal, ketik nama atau NIM pada “Tambah izin” lalu pilih orangnya. Klik ✕ untuk menghapus izin.",
+      },
+      {
+        title: "Hapus jadwal",
+        detail: "Klik ikon tempat sampah. Jadwal belum bisa diedit; hapus lalu tambah ulang bila ada perubahan.",
+      },
+    ],
+    tips: [
+      "Setiap jadwal magang otomatis menjadi kolom kehadiran di tab Penilaian.",
+      "Izin magang hanya terlihat di admin, tidak ditampilkan ke calon anggota.",
+    ],
+  },
+  {
+    id: "penilaian",
+    title: "Penilaian Calon Anggota",
+    icon: ClipboardCheck,
+    href: "/dashboard/penilaian",
+    requires: "Nilai pendaftar (nilai & item); Kelola acara divisi (kehadiran magang); Lihat pendaftar (melihat)",
+    intro:
+      "Tabel penilaian per divisi berisi calon anggota yang Pilihan 1-nya divisi tersebut. Nilai hanya terlihat oleh admin, tidak pernah ditampilkan ke calon anggota.",
+    steps: [
+      { title: "Pilih divisi", detail: "Divisi otomatis terpilih sesuai role panitia Anda; ganti lewat dropdown bila perlu." },
+      {
+        title: "Kolom pertemuan otomatis",
+        detail:
+          "Setiap Jadwal Magang dan Acara divisi itu (termasuk acara Semua Divisi) langsung menjadi kolom. Kolom acara terisi dari scan QR & izin acara; kolom magang diisi dengan klik sel (Alpha → Hadir → Izin).",
+      },
+      {
+        title: "Tambah item penilaian",
+        detail: "Ketik nama item (mis. Tugas 1) lalu klik Tambah Item Penilaian. Menghapus item ikut menghapus semua nilainya.",
+      },
+      {
+        title: "Isi nilai & catatan",
+        detail: "Isi angka 0–100 di sel; tersimpan saat pindah sel. Klik ikon 💬 untuk catatan (ikon merah = sudah ada catatan, arahkan kursor untuk membaca).",
+      },
+      { title: "Baca ringkasan", detail: "Kolom Hadir x/y menghitung pertemuan yang sudah lewat; Rata-rata dihitung dari nilai yang sudah diisi." },
+    ],
+    statuses: [
+      {
+        group: "Kehadiran pertemuan",
+        items: [
+          { label: "Hadir", tone: "ok", meaning: "Dipindai di acara, atau ditandai hadir di magang." },
+          { label: "Izin", tone: "neutral", meaning: "Dicatat izin di halaman acara/jadwal magang atau di tabel ini." },
+          { label: "Alpha", tone: "warn", meaning: "Pertemuan sudah lewat tanpa hadir maupun izin." },
+          { label: "–", tone: "past", meaning: "Pertemuan belum berlangsung." },
+        ],
+      },
+    ],
+    tips: ["Koreksi kehadiran acara dilakukan di halaman acaranya; tab Penilaian ikut berubah otomatis."],
   },
   {
     id: "notifikasi",
