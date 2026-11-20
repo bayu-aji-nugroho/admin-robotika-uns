@@ -120,11 +120,14 @@ export async function GET(request: Request) {
       (adminsResult.data || []).map((a) => [a.id, a.full_name || a.email.split("@")[0]])
     );
 
+    // Basis Pilihan 1 / Pilihan 1 atau 2: kelompokkan per Pilihan 1 tiap calon
+    const groupOf = (r: RegistrationRow) =>
+      (opts.basis === "accepted" ? r.accepted_division_name : r.primary_division_name) || "~";
     const rows = ((registrationsResult.data as RegistrationRow[]) || [])
       .filter((r) => matchesExportFilters(r, bookings.get(r.id), opts))
       .sort(
         (a, b) =>
-          (a.accepted_division_name || "~").localeCompare(b.accepted_division_name || "~", "id") ||
+          groupOf(a).localeCompare(groupOf(b), "id") ||
           (a.full_name || "").localeCompare(b.full_name || "", "id")
       );
 
@@ -176,7 +179,16 @@ export async function GET(request: Request) {
     autoTable(doc, {
       startY: 27,
       head: [["No", "Nama", ...columns.map((c) => c.label)]],
-      body: rows.map((r, i) => [String(i + 1), r.full_name || "-", ...columns.map((c) => cellOf(r, c.key))]),
+      body: rows.flatMap((r, i) => {
+        const row = [String(i + 1), r.full_name || "-", ...columns.map((c) => cellOf(r, c.key))];
+        if (opts.basis === "accepted" || (i > 0 && groupOf(rows[i - 1]) === groupOf(r))) return [row];
+        const total = rows.filter((x) => groupOf(x) === groupOf(r)).length;
+        const label = groupOf(r) === "~" ? "Tanpa Pilihan 1" : `Pilihan 1: ${groupOf(r)}`;
+        return [
+          [{ content: `${label} (${total} orang)`, colSpan: keys.length, styles: { fontStyle: "bold" as const, fillColor: [252, 242, 243] as [number, number, number], textColor: BRAND_RED } }],
+          row,
+        ];
+      }),
       styles: { font: "helvetica", fontSize: 7.5, cellPadding: 1.6, overflow: "linebreak", valign: "middle" },
       headStyles: { fillColor: BRAND_RED, textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: [248, 248, 247] },

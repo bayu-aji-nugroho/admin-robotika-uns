@@ -31,6 +31,8 @@ interface Candidate {
   id: string;
   full_name: string | null;
   nim: string | null;
+  fakultas: string | null;
+  prodi: string | null;
 }
 
 /** Kolom pertemuan: jadwal magang (diisi admin) atau acara divisi (dari scan QR) */
@@ -71,7 +73,7 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
   const [cands, schedules, events, items] = await Promise.all([
     supabase
       .from("applicant_divisions")
-      .select("applicants!inner(id, full_name, nim, status)")
+      .select("applicants!inner(id, full_name, nim, fakultas, prodi, status)")
       .eq("division_id", divisionId)
       .eq("priority", 1)
       .eq("applicants.status", "submitted"),
@@ -362,6 +364,10 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
                       <td className="py-2 px-3 sticky left-0 bg-white dark:bg-[#121215] z-10">
                         <p className="font-semibold text-zinc-900 dark:text-zinc-100">{c.full_name || "-"}</p>
                         <p className="font-mono text-[11px] text-zinc-500">{c.nim || "-"}</p>
+                        <p className="text-[11px] text-zinc-500">
+                          {c.fakultas || "-"}
+                          {c.prodi && ` · ${c.prodi}`}
+                        </p>
                       </td>
                       {data.meetings.map((m) => {
                         const status = attendanceOf(m, c.id);
