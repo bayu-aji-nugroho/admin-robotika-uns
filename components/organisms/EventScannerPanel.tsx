@@ -113,15 +113,18 @@ export function EventScannerPanel({
       const res = (data || {}) as {
         ok?: boolean;
         code?: string;
+        status?: "present" | "late";
         message?: string;
         applicant?: ScannedApplicant;
       };
 
       let next: ScanFeedback;
       if (res.ok && res.code === "checked_in") {
+        // Lewat jam mulai acara = Terlambat (tetap tercatat datang)
+        const late = res.status === "late";
         next = {
-          kind: "success",
-          title: "Hadir",
+          kind: late ? "warning" : "success",
+          title: late ? "Terlambat" : "Hadir (tepat waktu)",
           detail: "Cocokkan nama & NIM dengan KTM peserta.",
           applicant: res.applicant,
         };

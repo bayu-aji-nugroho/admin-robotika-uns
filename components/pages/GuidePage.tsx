@@ -460,22 +460,23 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Ubah status kehadiran",
         detail:
-          "Di kolom Ubah Status tiap baris, pilih Hadir, Terlambat, Izin, Alpha, atau Belum Hadir (mengosongkan). Bisa dipakai kapan saja, termasuk di luar jam scan, mis. lupa scan atau datang terlambat.",
+          "Di kolom Ubah Status tiap baris, pilih Hadir, Terlambat, Izin, Alpha, atau Belum Hadir (mengosongkan). Bisa dipakai kapan saja, mis. lupa scan atau koreksi status.",
       },
     ],
     statuses: [
       {
         group: "Hasil scan",
         items: [
-          { label: "Hadir", tone: "ok", meaning: "Kehadiran tercatat. Cocokkan nama & NIM dengan KTM; ubah ke Terlambat lewat kolom Ubah Status bila perlu." },
+          { label: "Hadir (tepat waktu)", tone: "ok", meaning: "Dipindai sebelum atau tepat di jam mulai acara. Cocokkan nama & NIM dengan KTM." },
+          { label: "Terlambat", tone: "warn", meaning: "Dipindai setelah jam mulai acara; otomatis tercatat Terlambat." },
           { label: "Sudah Absen", tone: "warn", meaning: "QR ini sudah dipindai sebelumnya; tidak tercatat dua kali." },
           { label: "Bukan Peserta Acara Ini", tone: "neutral", meaning: "Calon di luar divisi/cakupan acara (acara bercakupan)." },
-          { label: "Presensi Tidak Aktif", tone: "neutral", meaning: "Di luar jam scan (1 jam sebelum mulai s.d. 1 jam setelah selesai) atau acara dinonaktifkan." },
+          { label: "Presensi Tidak Aktif", tone: "neutral", meaning: "Acara sedang dinonaktifkan." },
         ],
       },
     ],
     tips: [
-      "Tanpa jam selesai, scan diterima sampai 12 jam setelah acara mulai.",
+      "Scan tidak dibatasi jam: sebelum/tepat jam mulai = Hadir, setelah jam mulai = Terlambat. Pastikan jam mulai acara diisi dengan benar.",
       "Minta calon anggota menaikkan kecerahan layar dan menyimpan screenshot QR bila sinyal di lokasi lemah.",
       "Kehadiran acara otomatis masuk ke tab Penilaian divisi terkait.",
     ],
