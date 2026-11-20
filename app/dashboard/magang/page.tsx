@@ -33,7 +33,7 @@ export default async function MagangRoute() {
     redirect("/dashboard");
   }
 
-  const [divisionsResult, schedulesResult, adminResult] = await Promise.all([
+  const [divisionsResult, schedulesResult, adminResult, excusesResult] = await Promise.all([
     supabase
       .from("divisions")
       .select("id, name, category")
@@ -50,7 +50,12 @@ export default async function MagangRoute() {
       .select("internship_division")
       .eq("email", user.email.toLowerCase().trim())
       .maybeSingle(),
+    supabase.from("internship_excuses").select("schedule_id, applicant_id, applicants(full_name, nim)"),
   ]);
+  const initialExcuses = (excusesResult.data || []).map((e) => {
+    const app = e.applicants as unknown as { full_name: string | null; nim: string | null } | null;
+    return { schedule_id: e.schedule_id, applicant_id: e.applicant_id, full_name: app?.full_name ?? null, nim: app?.nim ?? null };
+  });
 
   return (
     <InternshipSchedulePage
@@ -58,6 +63,7 @@ export default async function MagangRoute() {
       initialSchedules={schedulesResult.data || []}
       canManage={hasPermission(access, "events.manage")}
       defaultDivision={adminResult.data?.internship_division ?? null}
+      initialExcuses={initialExcuses}
     />
   );
 }

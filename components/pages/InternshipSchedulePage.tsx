@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Briefcase, MapPin, Plus, Trash2, Loader2 } from "lucide-react";
+import { Briefcase, MapPin, Plus, Trash2, Loader2, X } from "lucide-react";
+import { ApplicantSearchPicker, type PickedApplicant } from "@/components/organisms/ApplicantSearchPicker";
 import { createClient } from "@/utils/supabase/client";
 import { formatJakartaDateTime, fromJakartaInputValue } from "@/utils/jakartaTime";
 
@@ -18,12 +19,21 @@ interface ScheduleItem {
   location: string;
 }
 
+interface ExcuseItem {
+  schedule_id: string;
+  applicant_id: string;
+  full_name: string | null;
+  nim: string | null;
+}
+
 interface InternshipSchedulePageProps {
   divisions: DivisionItem[];
   initialSchedules: ScheduleItem[];
   canManage: boolean;
   /** Divisi bawaan admin (id divisi, atau "teknis" = semua divisi teknis) */
   defaultDivision?: string | null;
+  /** Peserta izin per jadwal */
+  initialExcuses?: ExcuseItem[];
 }
 
 /** Pilihan khusus: satu jadwal untuk semua divisi teknis (Werkudara & Cakrawala) */
@@ -38,7 +48,9 @@ export function InternshipSchedulePage({
   initialSchedules,
   canManage,
   defaultDivision,
+  initialExcuses = [],
 }: InternshipSchedulePageProps) {
+  const [excuses, setExcuses] = useState<ExcuseItem[]>(initialExcuses);
   const [schedules, setSchedules] = useState<ScheduleItem[]>(initialSchedules);
   const techIds = divisions.filter((d) => d.category === "teknis").map((d) => d.id);
   const initialDivision =
@@ -80,6 +92,27 @@ export function InternshipSchedulePage({
     setDeletingId(null);
     if (err) return setError(err.message);
     setSchedules((prev) => prev.filter((s) => s.id !== item.id));
+  };
+
+  const addExcuse = async (scheduleId: string, a: PickedApplicant) => {
+    if (excuses.some((x) => x.schedule_id === scheduleId && x.applicant_id === a.id)) return;
+    setError(null);
+    const { error: err } = await createClient()
+      .from("internship_excuses")
+      .insert({ schedule_id: scheduleId, applicant_id: a.id });
+    if (err) return setError(err.message);
+    setExcuses((prev) => [...prev, { schedule_id: scheduleId, applicant_id: a.id, full_name: a.full_name, nim: a.nim }]);
+  };
+
+  const removeExcuse = async (x: ExcuseItem) => {
+    setError(null);
+    const { error: err } = await createClient()
+      .from("internship_excuses")
+      .delete()
+      .eq("schedule_id", x.schedule_id)
+      .eq("applicant_id", x.applicant_id);
+    if (err) return setError(err.message);
+    setExcuses((prev) => prev.filter((e) => !(e.schedule_id === x.schedule_id && e.applicant_id === x.applicant_id)));
   };
 
   const grouped = divisions
@@ -172,10 +205,8 @@ export function InternshipSchedulePage({
               </h2>
               <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {items.map((s) => (
-                  <li
-                    key={s.id}
-                    className="flex items-start justify-between gap-2 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs"
-                  >
+                  <li key={s.id} className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 text-xs space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 space-y-1">
                       <p className="font-semibold text-zinc-900 dark:text-zinc-100">{formatJakartaDateTime(s.scheduled_at)}</p>
                       <p className="inline-flex items-center gap-1 text-zinc-600 dark:text-zinc-400 break-words">
@@ -194,6 +225,44 @@ export function InternshipSchedulePage({
                         {deletingId === s.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                       </button>
                     )}
+                  </div>
+
+                  {/* Peserta izin untuk jadwal ini */}
+                  {(() => {
+                    const list = excuses.filter((x) => x.schedule_id === s.id);
+                    return (
+                      <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-1.5">
+                        <p className="font-semibold text-zinc-700 dark:text-zinc-300">Izin ({list.length})</p>
+                        {list.length > 0 && (
+                          <ul className="space-y-1">
+                            {list.map((x) => (
+                              <li key={x.applicant_id} className="flex items-center justify-between gap-2">
+                                <span className="min-w-0 truncate text-zinc-800 dark:text-zinc-200">
+                                  {x.full_name || "-"} <span className="font-mono text-zinc-500">{x.nim || ""}</span>
+                                </span>
+                                {canManage && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeExcuse(x)}
+                                    aria-label={`Hapus izin ${x.full_name || ""}`}
+                                    className="p-1 -m-1 rounded text-zinc-400 hover:text-rose-600 cursor-pointer"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        {canManage && (
+                          <ApplicantSearchPicker
+                            placeholder="Tambah izin: nama / NIM"
+                            onPick={(a) => addExcuse(s.id, a)}
+                          />
+                        )}
+                      </div>
+                    );
+                  })()}
                   </li>
                 ))}
               </ul>

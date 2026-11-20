@@ -8,7 +8,9 @@ import {
   Clock,
   UserCheck,
   X,
+  FileX,
 } from "lucide-react";
+import { ApplicantSearchPicker, type PickedApplicant } from "@/components/organisms/ApplicantSearchPicker";
 import { createClient } from "@/utils/supabase/client";
 import { EventAttendanceItem } from "@/utils/divisionEvents.types";
 import { formatJakartaDateTime } from "@/utils/jakartaTime";
@@ -30,9 +32,10 @@ export function EventAttendeeTable({
   onRefresh,
 }: EventAttendeeTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "present" | "pending">(
+  const [statusFilter, setStatusFilter] = useState<"all" | "present" | "pending" | "excused">(
     "all"
   );
+  const [excuseError, setExcuseError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -62,6 +65,18 @@ export function EventAttendeeTable({
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  // Izin: dicari lewat nama/NIM; batal izin mengembalikan ke Belum Hadir (acara terbuka: dihapus)
+  const setExcused = async (applicantId: string, excused: boolean) => {
+    setExcuseError(null);
+    const { error } = await createClient().rpc("set_event_excused", {
+      p_event_id: eventId,
+      p_applicant_id: applicantId,
+      p_excused: excused,
+    });
+    if (error) setExcuseError(error.message);
+    await onRefresh();
   };
 
   const handleManualToggle = async (row: EventAttendanceItem) => {
@@ -121,13 +136,14 @@ export function EventAttendeeTable({
           <select
             value={statusFilter}
             onChange={(e) =>
-              setStatusFilter(e.target.value as "all" | "present" | "pending")
+              setStatusFilter(e.target.value as "all" | "present" | "pending" | "excused")
             }
             aria-label="Filter status kehadiran"
             className="px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700/70 rounded-lg text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden cursor-pointer"
           >
             <option value="all">Semua ({attendees.length})</option>
             <option value="present">Sudah Hadir</option>
+            <option value="excused">Izin</option>
             <option value="pending">Belum Hadir</option>
           </select>
         </div>
@@ -146,6 +162,26 @@ export function EventAttendeeTable({
           </button>
         )}
       </div>
+
+      {canManage && (
+        <div className="px-3.5 sm:px-4 py-3 border-b border-zinc-100 dark:border-zinc-800/80 space-y-1.5">
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+            <FileX className="w-3.5 h-3.5" />
+            Tambah peserta izin
+          </p>
+          <div className="max-w-md">
+            <ApplicantSearchPicker
+              placeholder="Cari nama atau NIM yang izin..."
+              onPick={(a: PickedApplicant) => setExcused(a.id, true)}
+            />
+          </div>
+          {excuseError && (
+            <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
+              {excuseError}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Tabel Peserta & Data Tiket QR */}
       {filtered.length > 0 ? (
@@ -166,6 +202,7 @@ export function EventAttendeeTable({
             <tbody className="divide-y divide-zinc-200/70 dark:divide-zinc-800/60 text-xs sm:text-sm">
               {filtered.map((row, idx) => {
                 const isPresent = row.status === "present";
+                const isExcused = row.status === "excused";
                 return (
                   <tr
                     key={row.id}
@@ -213,6 +250,11 @@ export function EventAttendeeTable({
                             </p>
                           )}
                         </div>
+                      ) : isExcused ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 dark:text-sky-400">
+                          <FileX className="w-3.5 h-3.5" />
+                          Izin
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
                           <Clock className="w-3.5 h-3.5" />
@@ -222,6 +264,16 @@ export function EventAttendeeTable({
                     </td>
                     {canManage && (
                       <td className="py-3 px-4 text-right">
+                        {isExcused ? (
+                          <button
+                            type="button"
+                            onClick={() => setExcused(row.applicant_id, false)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Batal Izin</span>
+                          </button>
+                        ) : (
                         <button
                           type="button"
                           onClick={() => handleManualToggle(row)}
@@ -235,6 +287,7 @@ export function EventAttendeeTable({
                           <UserCheck className="w-3.5 h-3.5" />
                           <span>{isPresent ? "Batalkan" : "Tandai Hadir"}</span>
                         </button>
+                        )}
                       </td>
                     )}
                   </tr>
