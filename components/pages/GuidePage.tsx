@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   BarChart3,
   Bell,
-  Briefcase,
   ClipboardCheck,
   QrCode,
   ListChecks,
@@ -489,44 +488,11 @@ const SECTIONS: GuideSection[] = [
     ],
   },
   {
-    id: "magang",
-    title: "Jadwal Magang",
-    icon: Briefcase,
-    href: "/dashboard/magang",
-    requires: "Kelola acara divisi (menambah & izin); Lihat pendaftar (melihat)",
-    intro:
-      "Tanggal, jam, dan tempat magang per divisi. Calon anggota melihat jadwal divisi Pilihan 1-nya dalam bentuk kotak-kotak di Dashboard website.",
-    steps: [
-      {
-        title: "Tambah jadwal",
-        detail:
-          "Divisi otomatis terpilih sesuai role panitia Anda. Isi tanggal & jam (WIB) dan tempat, lalu klik Tambah Jadwal. Satu jadwal = satu pertemuan.",
-      },
-      {
-        title: "Jadwal untuk semua divisi teknis",
-        detail: "Pilih “Semua Divisi Teknis (Werkudara & Cakrawala)” agar satu jadwal langsung tampil untuk keenam divisi teknis.",
-      },
-      {
-        title: "Catat izin & status kehadiran",
-        detail:
-          "Di kotak jadwal, ketik nama atau NIM pada “Tambah izin” lalu pilih orangnya (tercatat Izin). Statusnya bisa diganti ke Terlambat, Alpha, atau Hadir lewat dropdown di sebelah nama; klik ✕ untuk menghapus catatan.",
-      },
-      {
-        title: "Hapus jadwal",
-        detail: "Klik ikon tempat sampah. Jadwal belum bisa diedit; hapus lalu tambah ulang bila ada perubahan.",
-      },
-    ],
-    tips: [
-      "Setiap jadwal magang otomatis menjadi kolom kehadiran di tab Penilaian.",
-      "Izin magang hanya terlihat di admin, tidak ditampilkan ke calon anggota.",
-    ],
-  },
-  {
     id: "penilaian",
     title: "Penilaian Calon Anggota",
     icon: ClipboardCheck,
     href: "/dashboard/penilaian",
-    requires: "Nilai pendaftar atau Nilai magang (nilai & item); Kelola acara divisi (kehadiran magang); Lihat pendaftar (melihat)",
+    requires: "Nilai pendaftar atau Nilai magang (nilai & item); Lihat pendaftar (melihat)",
     intro:
       "Tabel penilaian per divisi berisi calon anggota yang Pilihan 1-nya divisi tersebut. Nilai hanya terlihat oleh admin, tidak pernah ditampilkan ke calon anggota.",
     steps: [
@@ -535,7 +501,7 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Kolom pertemuan otomatis",
         detail:
-          "Setiap Jadwal Magang dan Acara divisi itu (termasuk acara Semua Divisi) langsung menjadi kolom. Kolom acara terisi dari scan QR & status di halaman acara; kolom magang diisi lewat dropdown di sel (Hadir, Terlambat, Izin, Alpha).",
+          "Setiap acara divisi itu (termasuk acara Semua Divisi) langsung menjadi kolom. Isinya dari scan QR & status di halaman acara.",
       },
       {
         title: "Tambah item penilaian",
@@ -551,15 +517,18 @@ const SECTIONS: GuideSection[] = [
       {
         group: "Kehadiran pertemuan",
         items: [
-          { label: "Hadir", tone: "ok", meaning: "Dipindai di acara, atau ditandai hadir di magang." },
+          { label: "Hadir", tone: "ok", meaning: "Dipindai di acara, atau ditandai hadir di halaman acara." },
           { label: "Terlambat", tone: "warn", meaning: "Datang terlambat; tetap dihitung hadir di kolom Hadir x/y." },
-          { label: "Izin", tone: "neutral", meaning: "Dicatat izin di halaman acara/jadwal magang atau di tabel ini." },
+          { label: "Izin", tone: "neutral", meaning: "Dicatat izin di halaman acara." },
           { label: "Alpha", tone: "neutral", meaning: "Ditandai Alpha, atau pertemuan sudah lewat tanpa catatan kehadiran." },
           { label: "–", tone: "past", meaning: "Pertemuan belum berlangsung." },
         ],
       },
     ],
-    tips: ["Koreksi kehadiran acara dilakukan di halaman acaranya; tab Penilaian ikut berubah otomatis."],
+    tips: [
+      "Koreksi kehadiran acara dilakukan di halaman acaranya; tab Penilaian ikut berubah otomatis.",
+      "Calon anggota melihat kartu Riwayat Pertemuan di Dashboard website: daftar pertemuan yang sudah lewat beserta status kehadirannya (tanpa nilai) dan ringkasan Hadir x/y. Bila ada kejanggalan, mereka menekan tombol WhatsApp ke Nia (Humas); perbaiki statusnya di halaman acara.",
+    ],
   },
   {
     id: "notifikasi",
@@ -665,7 +634,7 @@ const ROLE_EXAMPLES: { name: string; permissions: AdminPermission[]; note: strin
   {
     name: "Teacher Magang",
     permissions: ["applicants.view", "grades.manage", "events.manage"],
-    note: "Mengisi nilai & catatan di tab Penilaian, mengelola jadwal & kehadiran magang, dan memindai QR acara. Tidak bisa mengubah keputusan penerimaan.",
+    note: "Mengisi nilai & catatan di tab Penilaian, membuat acara, mengelola kehadiran, dan memindai QR acara. Tidak bisa mengubah keputusan penerimaan.",
   },
   {
     name: "Panitia Inti",

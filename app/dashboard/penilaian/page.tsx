@@ -40,7 +40,7 @@ export default async function PenilaianRoute() {
       .eq("is_active", true)
       .order("category", { ascending: true })
       .order("name", { ascending: true }),
-    // Divisi bawaan sesuai role panitia OPREC admin ini (sama dengan Jadwal Magang)
+    // Divisi bawaan sesuai role panitia OPREC admin ini
     supabase
       .from("admin_whitelist")
       .select("internship_division")
@@ -53,7 +53,6 @@ export default async function PenilaianRoute() {
       divisions={divisionsResult.data || []}
       defaultDivision={adminResult.data?.internship_division ?? null}
       canAssess={hasPermission(access, "applicants.assess") || hasPermission(access, "grades.manage")}
-      canMarkAttendance={hasPermission(access, "events.manage")}
     />
   );
 }

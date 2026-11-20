@@ -21,11 +21,9 @@ interface GradebookPageProps {
   /** Divisi bawaan admin (id divisi, atau "teknis" = divisi teknis) */
   defaultDivision?: string | null;
   canAssess: boolean;
-  canMarkAttendance: boolean;
 }
 
 type Attendance = Exclude<AttendanceStatus, "pending">;
-const MAGANG_OPTIONS: Attendance[] = ["present", "late", "excused", "absent"];
 
 interface Candidate {
   id: string;
@@ -35,10 +33,9 @@ interface Candidate {
   prodi: string | null;
 }
 
-/** Kolom pertemuan: jadwal magang (diisi admin) atau acara divisi (dari scan QR) */
+/** Kolom pertemuan: acara divisi (dari scan QR & status di halaman acara) */
 interface Meeting {
   key: string;
-  kind: "magang" | "acara";
   id: string;
   label: string;
   at: string;
@@ -70,14 +67,13 @@ const shortDate = (iso: string) =>
 
 async function loadGradebook(divisionId: string): Promise<GradebookData> {
   const supabase = createClient();
-  const [cands, schedules, events, items] = await Promise.all([
+  const [cands, events, items] = await Promise.all([
     supabase
       .from("applicant_divisions")
       .select("applicants!inner(id, full_name, nim, fakultas, prodi, status)")
       .eq("division_id", divisionId)
       .eq("priority", 1)
       .eq("applicants.status", "submitted"),
-    supabase.from("internship_schedules").select("id, scheduled_at, location").eq("division_id", divisionId),
     supabase
       .from("division_events")
       .select("id, title, event_date")
@@ -89,14 +85,10 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
   const candidates = (cands.data || [])
     .map((r) => r.applicants as unknown as Candidate)
     .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || "", "id", { sensitivity: "base" }));
-  const scheduleIds = (schedules.data || []).map((s) => s.id);
   const eventIds = (events.data || []).map((e) => e.id);
   const itemIds = (items.data || []).map((i) => i.id);
 
-  const [magang, attendances, scores] = await Promise.all([
-    scheduleIds.length
-      ? supabase.from("internship_attendance").select("schedule_id, applicant_id, status").in("schedule_id", scheduleIds)
-      : { data: [] },
+  const [attendances, scores] = await Promise.all([
     eventIds.length
       ? supabase.from("event_attendances").select("event_id, applicant_id, status").in("event_id", eventIds)
       : { data: [] },
@@ -106,7 +98,6 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
   ]);
 
   const attendance: Record<string, Attendance> = {};
-  for (const m of magang.data || []) attendance[`magang-${m.schedule_id}:${m.applicant_id}`] = m.status as Attendance;
   for (const a of attendances.data || []) {
     if (a.status !== "pending") attendance[`acara-${a.event_id}:${a.applicant_id}`] = a.status as Attendance;
   }
@@ -116,29 +107,16 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
     scoreMap[`${s.item_id}:${s.applicant_id}`] = { score: s.score === null ? null : Number(s.score), note: s.note };
   }
 
-  const meetings: Meeting[] = [
-    ...(schedules.data || []).map((s) => ({
-      key: `magang-${s.id}`,
-      kind: "magang" as const,
-      id: s.id,
-      label: `Magang ${shortDate(s.scheduled_at)}`,
-      at: s.scheduled_at,
-    })),
-    ...(events.data || []).map((e) => ({
-      key: `acara-${e.id}`,
-      kind: "acara" as const,
-      id: e.id,
-      label: e.title,
-      at: e.event_date,
-    })),
-  ].sort((a, b) => a.at.localeCompare(b.at));
+  const meetings: Meeting[] = (events.data || [])
+    .map((e) => ({ key: `acara-${e.id}`, id: e.id, label: e.title, at: e.event_date }))
+    .sort((a, b) => a.at.localeCompare(b.at));
 
   return { divisionId, candidates, meetings, attendance, items: items.data || [], scores: scoreMap };
 }
 
 
 /** Tabel penilaian per divisi Pilihan 1: kehadiran pertemuan + item nilai buatan admin. */
-export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAttendance }: GradebookPageProps) {
+export function GradebookPage({ divisions, defaultDivision, canAssess }: GradebookPageProps) {
   const techDivisions = divisions.filter((d) => d.category === "teknis");
   const initialDivision =
     defaultDivision === "teknis"
@@ -167,28 +145,6 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
   const loading = !data || data.divisionId !== divisionId;
 
   const update = (fn: (d: GradebookData) => GradebookData) => setData((d) => (d ? fn(d) : d));
-
-  // Status magang dipilih admin; "" = kosongkan (lewat jadwal tetap terhitung Alpha)
-  const setMagang = async (m: Meeting, applicantId: string, value: Attendance | "") => {
-    const key = `${m.key}:${applicantId}`;
-    const supabase = createClient();
-    setError(null);
-    const { error: err } = value
-      ? await supabase
-          .from("internship_attendance")
-          .upsert(
-            { schedule_id: m.id, applicant_id: applicantId, status: value, updated_at: new Date().toISOString() },
-            { onConflict: "schedule_id,applicant_id" }
-          )
-      : await supabase.from("internship_attendance").delete().match({ schedule_id: m.id, applicant_id: applicantId });
-    if (err) return setError(err.message);
-    update((d) => {
-      const attendance = { ...d.attendance };
-      if (value) attendance[key] = value;
-      else delete attendance[key];
-      return { ...d, attendance };
-    });
-  };
 
   const saveScore = async (itemId: string, applicantId: string, patch: Partial<Score>) => {
     if (!data) return;
@@ -259,7 +215,7 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
               Penilaian Calon Anggota
             </h1>
             <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              Calon anggota Pilihan 1 divisi ini. Kolom pertemuan muncul otomatis dari Jadwal Magang dan acara yang dibuat.
+              Calon anggota Pilihan 1 divisi ini. Kolom pertemuan muncul otomatis dari acara yang dibuat.
             </p>
           </div>
           <label className="flex items-center gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
@@ -323,8 +279,8 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
                   <th className="py-2.5 px-3 min-w-48 sticky left-0 bg-zinc-50 dark:bg-zinc-900 z-10">Calon Anggota</th>
                   {data.meetings.map((m) => (
                     <th key={m.key} className="py-2.5 px-2 text-center min-w-20 font-semibold" title={m.label}>
-                      <span className="block text-[10px] uppercase tracking-wide text-zinc-400">{m.kind}</span>
-                      <span className="block max-w-28 truncate">{m.kind === "acara" ? m.label : shortDate(m.at)}</span>
+                      <span className="block text-[10px] uppercase tracking-wide text-zinc-400">{shortDate(m.at)}</span>
+                      <span className="block max-w-28 truncate">{m.label}</span>
                     </th>
                   ))}
                   {data.items.map((item) => (
@@ -380,25 +336,7 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
                         );
                         return (
                           <td key={m.key} className="py-2 px-2 text-center">
-                            {m.kind === "magang" && canMarkAttendance ? (
-                              <select
-                                value={data.attendance[`${m.key}:${c.id}`] || ""}
-                                onChange={(e) => setMagang(m, c.id, e.target.value as Attendance | "")}
-                                aria-label={`Kehadiran ${m.label} ${c.full_name || ""}`}
-                                className={`px-1.5 py-0.5 rounded font-semibold border-0 cursor-pointer ${
-                                  status ? ATTENDANCE_BADGE_CLASS[status] : "bg-zinc-50 text-zinc-400 dark:bg-zinc-900"
-                                }`}
-                              >
-                                <option value="">{status === "absent" ? "Alpha" : "–"}</option>
-                                {MAGANG_OPTIONS.map((st) => (
-                                  <option key={st} value={st}>
-                                    {ATTENDANCE_LABELS[st]}
-                                  </option>
-                                ))}
-                              </select>
-                            ) : (
-                              badge
-                            )}
+                            {badge}
                           </td>
                         );
                       })}
