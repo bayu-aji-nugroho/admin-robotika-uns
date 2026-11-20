@@ -125,7 +125,9 @@ const SECTIONS: GuideSection[] = [
             Klik <strong>Ekspor PDF</strong>, lalu di pop-up pilih jenis dokumen (<strong>Daftar Calon Anggota</strong>{" "}
             atau <strong>Lembar Wawancara</strong>), filter divisi (berdasarkan divisi diterima, pilihan 1, atau pilihan
             1/2), status penilaian, dan status wawancara. Untuk Daftar, centang kolom yang ingin ditampilkan (termasuk
-            Pewawancara). Klik <strong>Unduh PDF</strong>; bila gagal, alasannya tampil di pop-up.
+            Pewawancara). Dengan dasar <strong>Pilihan 1</strong> atau <strong>Pilihan 1 atau 2</strong>, Daftar
+            dikelompokkan per Pilihan 1 tiap calon (judul grup berisi nama divisi & jumlah orang, nama urut A–Z). Klik{" "}
+            <strong>Unduh PDF</strong>; bila gagal, alasannya tampil di pop-up.
           </>
         ),
       },
@@ -445,12 +447,17 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Pilih cakupan peserta",
         detail:
-          "“Semua Calon Anggota” (bawaan): tabel kosong dulu, orang masuk saat QR-nya dipindai. Cakupan lain (Diterima, Pilihan 1, Semua Pendaftar) membuat daftar peserta dari awal dengan status Belum Hadir; calon anggota baru otomatis ikut saat halaman acara dibuka.",
+          "Penerima otomatis mengikuti divisi: pilih divisi tertentu (mis. Administrasi) → “Pendaftar Pilihan 1” divisi itu; pilih Semua Divisi → “Semua Calon Anggota” (tabel kosong dulu, orang masuk saat QR-nya dipindai). Penerima masih bisa diganti manual. Cakupan lain (Diterima, Pilihan 1, Semua Pendaftar) membuat daftar peserta dari awal dengan status Belum Hadir; calon anggota baru otomatis ikut saat halaman acara dibuka.",
       },
       {
         title: "Scan QR",
         detail:
           "Buka detail acara, klik Aktifkan Kamera (izinkan kamera di browser), lalu arahkan ke QR yang ditampilkan calon anggota layar penuh. Layar menampilkan nama, NIM, prodi, dan Pilihan 1/2 — cocokkan dengan KTM agar tidak ada titip absen.",
+      },
+      {
+        title: "Atau: calon scan QR acara",
+        detail:
+          "Klik Tampilkan QR Acara lalu tunjukkan layar (atau proyektor) ke peserta. Calon memindai dengan kamera HP, login akun pendaftarannya, dan kehadirannya tercatat (Hadir/Terlambat sesuai jam mulai). QR berganti tiap 30 detik sehingga foto QR tidak bisa dibagikan ke yang tidak datang. Tabel kehadiran di halaman acara refresh otomatis tiap 5 detik.",
       },
       {
         title: "Catat peserta izin",
@@ -519,11 +526,12 @@ const SECTIONS: GuideSection[] = [
     title: "Penilaian Calon Anggota",
     icon: ClipboardCheck,
     href: "/dashboard/penilaian",
-    requires: "Nilai pendaftar (nilai & item); Kelola acara divisi (kehadiran magang); Lihat pendaftar (melihat)",
+    requires: "Nilai pendaftar atau Nilai magang (nilai & item); Kelola acara divisi (kehadiran magang); Lihat pendaftar (melihat)",
     intro:
       "Tabel penilaian per divisi berisi calon anggota yang Pilihan 1-nya divisi tersebut. Nilai hanya terlihat oleh admin, tidak pernah ditampilkan ke calon anggota.",
     steps: [
       { title: "Pilih divisi", detail: "Divisi otomatis terpilih sesuai role panitia Anda; ganti lewat dropdown bila perlu." },
+      { title: "Identitas calon", detail: "Setiap baris menampilkan nama, NIM, serta fakultas & prodi calon anggota (urut nama A–Z)." },
       {
         title: "Kolom pertemuan otomatis",
         detail:
@@ -653,6 +661,11 @@ const ROLE_EXAMPLES: { name: string; permissions: AdminPermission[]; note: strin
     name: "Penilai",
     permissions: ["applicants.view", "applicants.assess"],
     note: "Melihat berkas pendaftar dan memberi keputusan penerimaan.",
+  },
+  {
+    name: "Teacher Magang",
+    permissions: ["applicants.view", "grades.manage", "events.manage"],
+    note: "Mengisi nilai & catatan di tab Penilaian, mengelola jadwal & kehadiran magang, dan memindai QR acara. Tidak bisa mengubah keputusan penerimaan.",
   },
   {
     name: "Panitia Inti",

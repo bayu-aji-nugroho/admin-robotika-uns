@@ -191,7 +191,11 @@ export function EventFormModal({
               <select
                 id="event-division"
                 value={selectedDivisionId}
-                onChange={(e) => setDivisionId(e.target.value)}
+                onChange={(e) => {
+                  setDivisionId(e.target.value);
+                  // Divisi tertentu = peserta otomatis Pilihan 1-nya (sejalan dengan tab Penilaian); Semua Divisi = tercatat saat scan
+                  setTargetScope(e.target.value ? "registered_p1" : "open");
+                }}
                 className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden"
               >
                 <option value="">Semua Divisi</option>

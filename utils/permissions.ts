@@ -59,6 +59,12 @@ export const ADMIN_PERMISSIONS = [
     description:
       "Menambahkan acara divisi, menyiapkan data tiket QR calon anggota, dan memindai QR Code kehadiran.",
   },
+  {
+    key: "grades.manage",
+    label: "Nilai magang",
+    description:
+      "Menambah item penilaian serta mengisi nilai & catatan calon anggota di tab Penilaian, tanpa bisa mengubah keputusan penerimaan.",
+  },
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number]["key"];

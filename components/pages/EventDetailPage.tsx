@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Calendar, MapPin, Users } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { EventScannerPanel } from "@/components/organisms/EventScannerPanel";
 import { EventAttendeeTable } from "@/components/organisms/EventAttendeeTable";
+import { EventSelfCheckinQr } from "@/components/organisms/EventSelfCheckinQr";
 import {
   DivisionEventSummary,
   EventAttendanceItem,
@@ -44,6 +45,14 @@ export function EventDetailPage({
       setAttendees(data.map(mapAttendanceRow));
     }
   }, [event.id]);
+
+  // Auto refresh: absen mandiri & scan dari HP panitia lain langsung terlihat
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void refreshAttendees();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [refreshAttendees]);
 
   return (
     <div className="flex-1 bg-[#F9F9F8] dark:bg-[#09090b] min-h-screen py-6 px-4 sm:px-8 transition-colors">
@@ -99,6 +108,12 @@ export function EventDetailPage({
                 : `${presentCount} / ${attendees.length} Hadir`}
             </span>
           </div>
+
+          {canManage && (
+            <div className="pt-1">
+              <EventSelfCheckinQr eventId={event.id} title={event.title} />
+            </div>
+          )}
         </div>
 
         {/* Camera Scanner */}

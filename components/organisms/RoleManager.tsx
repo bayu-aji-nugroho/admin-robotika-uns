@@ -227,7 +227,7 @@ function AddMemberForm({
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@student.uns.ac.id"
+          placeholder="email apa saja, mis. nama@gmail.com"
           className={inputClass}
           disabled={busy}
         />

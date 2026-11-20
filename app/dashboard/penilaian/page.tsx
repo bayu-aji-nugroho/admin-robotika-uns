@@ -52,7 +52,7 @@ export default async function PenilaianRoute() {
     <GradebookPage
       divisions={divisionsResult.data || []}
       defaultDivision={adminResult.data?.internship_division ?? null}
-      canAssess={hasPermission(access, "applicants.assess")}
+      canAssess={hasPermission(access, "applicants.assess") || hasPermission(access, "grades.manage")}
       canMarkAttendance={hasPermission(access, "events.manage")}
     />
   );
