@@ -13,7 +13,7 @@ import type {
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "Acara Divisi - Robotika Universitas Sebelas Maret",
+  title: "Buat Acara - Robotika Universitas Sebelas Maret",
   description:
     "Kelola acara per divisi, data tiket QR calon anggota, dan pemindaian kehadiran.",
 };

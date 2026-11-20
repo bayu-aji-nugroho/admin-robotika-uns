@@ -88,7 +88,7 @@ export function EventsPage({
           <div>
             <h1 className="flex items-center gap-2 text-lg sm:text-xl font-bold text-[#18181b] dark:text-zinc-100">
               <QrCode className="w-5 h-5 text-[#B22234] dark:text-rose-400" />
-              Acara Divisi &amp; Presensi QR
+              Buat Acara &amp; Presensi QR
             </h1>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
               Buat acara per divisi untuk menyiapkan data tiket QR anggota dan

@@ -138,7 +138,7 @@ export function EventFormModal({
               id="event-modal-title"
               className="text-sm sm:text-base font-bold text-[#18181b] dark:text-zinc-100"
             >
-              Tambah Acara Divisi
+              Tambah Acara
             </h2>
           </div>
           <button

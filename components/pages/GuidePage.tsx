@@ -432,7 +432,7 @@ const SECTIONS: GuideSection[] = [
   },
   {
     id: "acara",
-    title: "Acara Divisi & Presensi QR",
+    title: "Buat Acara & Presensi QR",
     icon: QrCode,
     href: "/dashboard/acara",
     requires: "Kelola acara divisi (membuat, scan & izin); Lihat pendaftar (melihat)",
@@ -457,7 +457,7 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Atau: calon scan QR acara",
         detail:
-          "Klik Tampilkan QR Acara lalu tunjukkan layar (atau proyektor) ke peserta. Calon memindai dengan kamera HP, login akun pendaftarannya, dan kehadirannya tercatat (Hadir/Terlambat sesuai jam mulai). QR berganti tiap 30 detik sehingga foto QR tidak bisa dibagikan ke yang tidak datang. Tabel kehadiran di halaman acara refresh otomatis tiap 5 detik.",
+          "Klik Tampilkan QR Acara lalu tunjukkan layar (atau proyektor) ke peserta. Calon memindai dengan kamera HP, login akun pendaftarannya, dan kehadirannya tercatat (Hadir sampai 15 menit setelah jam mulai, lewat dari itu Terlambat). QR berganti tiap 30 detik sehingga foto QR tidak bisa dibagikan ke yang tidak datang. Tabel kehadiran di halaman acara refresh otomatis tiap 5 detik.",
       },
       {
         title: "Catat peserta izin",
@@ -474,8 +474,8 @@ const SECTIONS: GuideSection[] = [
       {
         group: "Hasil scan",
         items: [
-          { label: "Hadir (tepat waktu)", tone: "ok", meaning: "Dipindai sebelum atau tepat di jam mulai acara. Cocokkan nama & NIM dengan KTM." },
-          { label: "Terlambat", tone: "warn", meaning: "Dipindai setelah jam mulai acara; otomatis tercatat Terlambat." },
+          { label: "Hadir (tepat waktu)", tone: "ok", meaning: "Dipindai paling lambat 15 menit setelah jam mulai acara (toleransi). Cocokkan nama & NIM dengan KTM." },
+          { label: "Terlambat", tone: "warn", meaning: "Dipindai lebih dari 15 menit setelah jam mulai acara; otomatis tercatat Terlambat." },
           { label: "Sudah Absen", tone: "warn", meaning: "QR ini sudah dipindai sebelumnya; tidak tercatat dua kali." },
           { label: "Bukan Peserta Acara Ini", tone: "neutral", meaning: "Calon di luar divisi/cakupan acara (acara bercakupan)." },
           { label: "Presensi Tidak Aktif", tone: "neutral", meaning: "Acara sedang dinonaktifkan." },
@@ -483,7 +483,7 @@ const SECTIONS: GuideSection[] = [
       },
     ],
     tips: [
-      "Scan tidak dibatasi jam: sebelum/tepat jam mulai = Hadir, setelah jam mulai = Terlambat. Pastikan jam mulai acara diisi dengan benar.",
+      "Scan tidak dibatasi jam: sampai 15 menit setelah jam mulai = Hadir (toleransi), lewat 15 menit = Terlambat. Pastikan jam mulai acara diisi dengan benar.",
       "Minta calon anggota menaikkan kecerahan layar dan menyimpan screenshot QR bila sinyal di lokasi lemah.",
       "Kehadiran acara otomatis masuk ke tab Penilaian divisi terkait.",
     ],

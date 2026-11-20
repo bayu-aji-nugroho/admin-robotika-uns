@@ -259,7 +259,7 @@ export function GradebookPage({ divisions, defaultDivision, canAssess, canMarkAt
               Penilaian Calon Anggota
             </h1>
             <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              Calon anggota Pilihan 1 divisi ini. Kolom pertemuan muncul otomatis dari Jadwal Magang dan Acara Divisi.
+              Calon anggota Pilihan 1 divisi ini. Kolom pertemuan muncul otomatis dari Jadwal Magang dan acara yang dibuat.
             </p>
           </div>
           <label className="flex items-center gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300">

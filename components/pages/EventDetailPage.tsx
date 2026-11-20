@@ -64,7 +64,7 @@ export function EventDetailPage({
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-[#B22234] dark:text-zinc-400 dark:hover:text-rose-400 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Kembali ke Daftar Acara Divisi</span>
+            <span>Kembali ke Daftar Acara</span>
           </Link>
         </div>
 

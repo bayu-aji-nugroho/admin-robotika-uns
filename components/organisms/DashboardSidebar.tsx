@@ -228,9 +228,9 @@ export function DashboardSidebar({
             isCollapsed={isCollapsed}
           />
 
-          {/* 4. Acara Divisi */}
+          {/* 4. Buat Acara */}
           <NavItem
-            label="Acara Divisi"
+            label="Buat Acara"
             icon={QrCode}
             href="/dashboard/acara"
             isActive={currentPath.startsWith("/dashboard/acara")}
