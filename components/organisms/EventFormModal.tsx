@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, CalendarPlus, AlertCircle } from "lucide-react";
+import { X, CalendarPlus, AlertCircle, Pencil } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/atoms/Button";
 import {
+  DivisionEventSummary,
   DivisionOptionItem,
   EventTargetScope,
   TARGET_SCOPE_LABELS,
@@ -15,7 +16,10 @@ interface EventFormModalProps {
   isOpen: boolean;
   divisions: DivisionOptionItem[];
   onClose: () => void;
-  onCreated: (result: { eventId: string; ticketsCreated: number }) => void;
+  onCreated?: (result: { eventId: string; ticketsCreated: number }) => void;
+  /** Mode edit: ubah nama, waktu, lokasi & catatan acara yang sudah ada (divisi & penerima tetap) */
+  event?: DivisionEventSummary;
+  onSaved?: (patch: Pick<DivisionEventSummary, "title" | "event_date" | "end_date" | "location" | "description">) => void;
 }
 
 export function EventFormModal({
@@ -23,17 +27,20 @@ export function EventFormModal({
   divisions,
   onClose,
   onCreated,
+  event,
+  onSaved,
 }: EventFormModalProps) {
-  const [title, setTitle] = useState("");
+  const isEdit = Boolean(event);
+  const [title, setTitle] = useState(event?.title ?? "");
   // "" = Semua Divisi (disimpan NULL)
   const [divisionId, setDivisionId] = useState("");
   const [targetScope, setTargetScope] = useState<EventTargetScope>("open");
   const [eventDate, setEventDate] = useState(() =>
-    toJakartaInputValue(new Date().toISOString())
+    toJakartaInputValue(event?.event_date ?? new Date().toISOString())
   );
-  const [endDate, setEndDate] = useState("");
-  const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
+  const [endDate, setEndDate] = useState(event?.end_date ? toJakartaInputValue(event.end_date) : "");
+  const [location, setLocation] = useState(event?.location ?? "");
+  const [description, setDescription] = useState(event?.description ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +86,23 @@ export function EventFormModal({
       setError(null);
       const supabase = createClient();
 
+      if (event) {
+        const patch = {
+          title: trimmedTitle,
+          event_date: startIso,
+          end_date: endIso,
+          location: location.trim() || null,
+          description: description.trim() || null,
+        };
+        const { error: updateError } = await supabase
+          .from("division_events")
+          .update({ ...patch, updated_at: new Date().toISOString() })
+          .eq("id", event.id);
+        if (updateError) throw new Error(updateError.message || "Gagal menyimpan perubahan acara.");
+        onSaved?.(patch);
+        return;
+      }
+
       const { data, error: rpcError } = await supabase.rpc(
         "create_division_event",
         {
@@ -106,7 +130,7 @@ export function EventFormModal({
       setLocation("");
       setEndDate("");
 
-      onCreated({
+      onCreated?.({
         eventId: payload.event_id || "",
         ticketsCreated: Number(payload.tickets_created || 0),
       });
@@ -133,12 +157,16 @@ export function EventFormModal({
       >
         <div className="px-5 py-4 border-b border-[#E4E4E7] dark:border-zinc-800 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <CalendarPlus className="w-4 h-4 text-[#B22234] dark:text-rose-400" />
+            {isEdit ? (
+              <Pencil className="w-4 h-4 text-[#B22234] dark:text-rose-400" />
+            ) : (
+              <CalendarPlus className="w-4 h-4 text-[#B22234] dark:text-rose-400" />
+            )}
             <h2
               id="event-modal-title"
               className="text-sm sm:text-base font-bold text-[#18181b] dark:text-zinc-100"
             >
-              Tambah Acara
+              {isEdit ? "Edit Acara" : "Tambah Acara"}
             </h2>
           </div>
           <button
@@ -180,6 +208,7 @@ export function EventFormModal({
             />
           </div>
 
+          {!isEdit && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label
@@ -232,6 +261,7 @@ export function EventFormModal({
               </select>
             </div>
           </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -319,7 +349,7 @@ export function EventFormModal({
               isLoading={isSubmitting}
               disabled={isSubmitting}
             >
-              Simpan &amp; Buat Tiket
+              {isEdit ? "Simpan Perubahan" : "Simpan & Buat Tiket"}
             </Button>
           </div>
         </form>

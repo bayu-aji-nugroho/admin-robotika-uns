@@ -2,11 +2,13 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Calendar, MapPin, Users } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Pencil, Users } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { EventScannerPanel } from "@/components/organisms/EventScannerPanel";
 import { EventAttendeeTable } from "@/components/organisms/EventAttendeeTable";
 import { EventSelfCheckinQr } from "@/components/organisms/EventSelfCheckinQr";
+import { EventFormModal } from "@/components/organisms/EventFormModal";
+import { Button } from "@/components/atoms/Button";
 import {
   DivisionEventSummary,
   EventAttendanceItem,
@@ -24,10 +26,12 @@ interface EventDetailPageProps {
 }
 
 export function EventDetailPage({
-  event,
+  event: initialEvent,
   initialAttendees,
   canManage,
 }: EventDetailPageProps) {
+  const [event, setEvent] = useState<DivisionEventSummary>(initialEvent);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [attendees, setAttendees] =
     useState<EventAttendanceItem[]>(initialAttendees);
 
@@ -110,11 +114,33 @@ export function EventDetailPage({
           </div>
 
           {canManage && (
-            <div className="pt-1">
+            <div className="pt-1 flex flex-wrap gap-2">
               <EventSelfCheckinQr eventId={event.id} title={event.title} />
+              <Button
+                type="button"
+                variant="secondary"
+                size="md"
+                onClick={() => setIsEditOpen(true)}
+                icon={<Pencil className="w-4 h-4" />}
+              >
+                Edit Acara
+              </Button>
             </div>
           )}
         </div>
+
+        {isEditOpen && (
+          <EventFormModal
+            isOpen
+            divisions={[]}
+            event={event}
+            onClose={() => setIsEditOpen(false)}
+            onSaved={(patch) => {
+              setEvent((prev) => ({ ...prev, ...patch }));
+              setIsEditOpen(false);
+            }}
+          />
+        )}
 
         {/* Camera Scanner */}
         <EventScannerPanel
