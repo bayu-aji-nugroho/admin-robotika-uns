@@ -49,13 +49,14 @@ export default async function AcaraRoute() {
     supabase
       .from("division_events")
       .select(
-        "id, title, description, division_id, target_scope, event_date, end_date, location, is_active, created_by, created_at, divisions(name, category)"
+        "id, title, description, division_id, extra_division_ids, target_scope, event_date, end_date, location, is_active, created_by, created_at, divisions(name, category)"
       )
       .order("event_date", { ascending: false }),
     supabase.from("event_attendances").select("event_id, status"),
   ]);
 
   const divisions = (divisionsResult.data as DivisionOptionItem[]) || [];
+  const divisionName = new Map(divisions.map((d) => [d.id, d.name]));
 
   // Hitung total tiket dan jumlah hadir per event
   const statsMap = new Map<string, { total: number; present: number }>();
@@ -78,7 +79,9 @@ export default async function AcaraRoute() {
       title: ev.title,
       description: ev.description,
       division_id: ev.division_id,
-      division_name: divRel?.name || ev.division_id || "Semua Divisi",
+      extra_division_ids: ev.extra_division_ids || [],
+      // Acara gabungan: "Werkudara Elektronika + Werkudara Mekanika + ..."
+      division_name: [divRel?.name || ev.division_id || "Semua Divisi", ...(ev.extra_division_ids || []).map((id: string) => divisionName.get(id) || id)].join(" + "),
       division_category: divRel?.category || "-",
       target_scope: (ev.target_scope as EventTargetScope) || "accepted",
       event_date: ev.event_date,

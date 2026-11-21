@@ -60,16 +60,17 @@ export default async function EventDetailRoute({ params }: PageProps) {
 
   // Sinkron otomatis berjalan bersamaan dengan pemuatan data agar halaman tidak menunggu;
   // bila ada peserta baru, daftar peserta dimuat ulang sekali
-  const [eventResult, firstAttendees, syncResult] = await Promise.all([
+  const [eventResult, firstAttendees, syncResult, divisionsResult] = await Promise.all([
     supabase
       .from("division_events")
       .select(
-        "id, title, description, division_id, target_scope, event_date, end_date, location, is_active, created_by, created_at, divisions(name, category)"
+        "id, title, description, division_id, extra_division_ids, target_scope, event_date, end_date, location, is_active, created_by, created_at, divisions(name, category)"
       )
       .eq("id", eventId)
       .maybeSingle(),
     fetchAttendees(),
     canManage ? supabase.rpc("sync_event_attendees", { p_event_id: eventId }) : null,
+    supabase.from("divisions").select("id, name"),
   ]);
   const attendeesResult = Number(syncResult?.data) > 0 ? await fetchAttendees() : firstAttendees;
 
@@ -90,7 +91,14 @@ export default async function EventDetailRoute({ params }: PageProps) {
     title: ev.title,
     description: ev.description,
     division_id: ev.division_id,
-    division_name: divRel?.name || ev.division_id || "Semua Divisi",
+    extra_division_ids: ev.extra_division_ids || [],
+    // Acara gabungan: nama divisi utama + divisi tambahan
+    division_name: [
+      divRel?.name || ev.division_id || "Semua Divisi",
+      ...(ev.extra_division_ids || []).map(
+        (id: string) => (divisionsResult.data || []).find((d) => d.id === id)?.name || id
+      ),
+    ].join(" + "),
     division_category: divRel?.category || "-",
     target_scope: (ev.target_scope as EventTargetScope) || "open",
     event_date: ev.event_date,

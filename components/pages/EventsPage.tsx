@@ -43,7 +43,10 @@ export function EventsPage({
 
   const filteredEvents = useMemo(() => {
     if (selectedDivision === "all") return events;
-    return events.filter((ev) => !ev.division_id || ev.division_id === selectedDivision);
+    return events.filter(
+      (ev) =>
+        !ev.division_id || ev.division_id === selectedDivision || ev.extra_division_ids.includes(selectedDivision)
+    );
   }, [events, selectedDivision]);
 
   const showToast = (msg: string) => {

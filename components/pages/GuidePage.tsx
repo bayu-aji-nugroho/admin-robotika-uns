@@ -441,7 +441,7 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Tambah acara",
         detail:
-          "Klik Tambah Acara, isi judul, divisi (pilih “Semua Divisi” untuk acara umum), jam mulai/selesai, dan lokasi.",
+          "Klik Tambah Acara, isi judul, divisi (pilih “Semua Divisi” untuk acara umum), jam mulai/selesai, dan lokasi. Acara gabungan (mis. Werkudara Elektronika, Mekanika & Pemrograman bersama): pilih satu divisi lalu pilih sampai 2 divisi lain di dropdown “Gabung dengan divisi lain”; peserta, tab Penilaian, dan riwayat calon ikut ketiga divisi. Bila acara berjalan terpisah, buat acara per divisi dan biarkan dropdown gabungan kosong.",
       },
       {
         title: "Pilih cakupan peserta",

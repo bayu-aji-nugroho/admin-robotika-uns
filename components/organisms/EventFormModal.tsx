@@ -34,6 +34,8 @@ export function EventFormModal({
   const [title, setTitle] = useState(event?.title ?? "");
   // "" = Semua Divisi (disimpan NULL)
   const [divisionId, setDivisionId] = useState("");
+  // Acara gabungan: divisi tambahan selain divisi utama (maks 2, total 3)
+  const [extraDivisionIds, setExtraDivisionIds] = useState<string[]>([]);
   const [targetScope, setTargetScope] = useState<EventTargetScope>("open");
   const [eventDate, setEventDate] = useState(() =>
     toJakartaInputValue(event?.event_date ?? new Date().toISOString())
@@ -113,6 +115,7 @@ export function EventFormModal({
           p_description: description.trim() || null,
           p_end_date: endIso,
           p_location: location.trim() || null,
+          p_extra_division_ids: selectedDivisionId ? extraDivisionIds : [],
         }
       );
 
@@ -129,6 +132,7 @@ export function EventFormModal({
       setDescription("");
       setLocation("");
       setEndDate("");
+      setExtraDivisionIds([]);
 
       onCreated?.({
         eventId: payload.event_id || "",
@@ -152,10 +156,10 @@ export function EventFormModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden"
+        className="w-full max-w-xl max-h-[90vh] flex flex-col bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-5 py-4 border-b border-[#E4E4E7] dark:border-zinc-800 flex items-center justify-between gap-3">
+        <div className="shrink-0 px-5 py-4 border-b border-[#E4E4E7] dark:border-zinc-800 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             {isEdit ? (
               <Pencil className="w-4 h-4 text-[#B22234] dark:text-rose-400" />
@@ -179,7 +183,8 @@ export function EventFormModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-4">
           {error && (
             <div
               role="alert"
@@ -222,6 +227,7 @@ export function EventFormModal({
                 value={selectedDivisionId}
                 onChange={(e) => {
                   setDivisionId(e.target.value);
+                  setExtraDivisionIds((prev) => (e.target.value ? prev.filter((id) => id !== e.target.value) : []));
                   // Divisi tertentu = peserta otomatis Pilihan 1-nya (sejalan dengan tab Penilaian); Semua Divisi = tercatat saat scan
                   setTargetScope(e.target.value ? "registered_p1" : "open");
                 }}
@@ -261,6 +267,54 @@ export function EventFormModal({
               </select>
             </div>
           </div>
+          )}
+
+          {!isEdit && selectedDivisionId && (
+            <fieldset className="p-3 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/40 space-y-2">
+              <legend className="sr-only">Gabung dengan divisi lain</legend>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                  Gabung dengan divisi lain <span className="font-normal text-zinc-400">(opsional)</span>
+                </span>
+                <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">{extraDivisionIds.length}/2</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[0, 1].map((slot) => {
+                  const value = extraDivisionIds[slot] ?? "";
+                  // Slot 2 baru aktif setelah slot 1 diisi; divisi yang sudah dipilih tidak muncul lagi
+                  const taken = [selectedDivisionId, ...extraDivisionIds.filter((_, i) => i !== slot)];
+                  return (
+                    <select
+                      key={slot}
+                      aria-label={`Divisi tambahan ${slot + 1}`}
+                      value={value}
+                      disabled={slot === 1 && !extraDivisionIds[0]}
+                      onChange={(e) =>
+                        setExtraDivisionIds((prev) => {
+                          const next = [prev[0] ?? "", prev[1] ?? ""];
+                          next[slot] = e.target.value;
+                          return next.filter(Boolean);
+                        })
+                      }
+                      className="w-full px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden disabled:opacity-50"
+                    >
+                      <option value="">{`— Divisi tambahan ${slot + 1} (opsional) —`}</option>
+                      {divisions
+                        .filter((div) => div.id === value || !taken.includes(div.id))
+                        .map((div) => (
+                          <option key={div.id} value={div.id}>
+                            {div.name}
+                          </option>
+                        ))}
+                    </select>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
+                Maks 2 divisi tambahan (total 3). Mis. Werkudara bersama: pilih Werkudara Elektronika, lalu Mekanika &amp;
+                Pemrograman di dropdown ini. Kosongkan bila acara berjalan terpisah.
+              </p>
+            </fieldset>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -332,7 +386,9 @@ export function EventFormModal({
             />
           </div>
 
-          <div className="pt-3 border-t border-[#E4E4E7] dark:border-zinc-800 flex items-center justify-end gap-2">
+          </div>
+
+          <div className="shrink-0 px-5 py-3.5 border-t border-[#E4E4E7] dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/40 flex items-center justify-end gap-2">
             <Button
               type="button"
               variant="secondary"

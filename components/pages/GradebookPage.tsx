@@ -77,7 +77,7 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
     supabase
       .from("division_events")
       .select("id, title, event_date")
-      .or(`division_id.eq.${divisionId},division_id.is.null`)
+      .or(`division_id.eq.${divisionId},division_id.is.null,extra_division_ids.cs.{${divisionId}}`)
       .eq("is_active", true),
     supabase.from("assessment_items").select("id, title").eq("division_id", divisionId).order("created_at"),
   ]);

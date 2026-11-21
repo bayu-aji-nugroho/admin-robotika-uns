@@ -12,6 +12,8 @@ export interface DivisionEventSummary {
   description: string | null;
   /** null = Semua Divisi */
   division_id: string | null;
+  /** Acara gabungan: divisi tambahan (maks 2), selain division_id */
+  extra_division_ids: string[];
   division_name: string;
   division_category: string;
   target_scope: EventTargetScope;
