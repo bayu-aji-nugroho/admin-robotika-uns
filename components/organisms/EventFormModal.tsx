@@ -259,7 +259,10 @@ export function EventFormModal({
               >
                 {(
                   Object.keys(TARGET_SCOPE_LABELS) as EventTargetScope[]
-                ).map((scopeKey) => (
+                )
+                  // Pilihan 1 & 2 tidak dipakai lagi (peserta acara divisi = Pilihan 1); label tetap untuk data lama
+                  .filter((scopeKey) => scopeKey !== "registered_all")
+                  .map((scopeKey) => (
                   <option key={scopeKey} value={scopeKey}>
                     {TARGET_SCOPE_LABELS[scopeKey]}
                   </option>

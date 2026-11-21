@@ -446,7 +446,7 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Pilih cakupan peserta",
         detail:
-          "Penerima otomatis mengikuti divisi: pilih divisi tertentu (mis. Administrasi) → “Pendaftar Pilihan 1” divisi itu; pilih Semua Divisi → “Semua Calon Anggota” (tabel kosong dulu, orang masuk saat QR-nya dipindai). Penerima masih bisa diganti manual. Cakupan lain (Diterima, Pilihan 1, Semua Pendaftar) membuat daftar peserta dari awal dengan status Belum Hadir; calon anggota baru otomatis ikut saat halaman acara dibuka.",
+          "Penerima otomatis mengikuti divisi: pilih divisi tertentu (mis. Administrasi) → “Pendaftar Pilihan 1” divisi itu; pilih Semua Divisi → “Semua Calon Anggota” (tabel kosong dulu, orang masuk saat QR-nya dipindai). Penerima masih bisa diganti manual. Cakupan lain (Diterima, Pilihan 1) membuat daftar peserta dari awal dengan status Belum Hadir; calon anggota baru otomatis ikut saat halaman acara dibuka.",
       },
       {
         title: "Catat keaktifan",
