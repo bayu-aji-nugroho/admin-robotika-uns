@@ -449,6 +449,11 @@ const SECTIONS: GuideSection[] = [
           "Penerima otomatis mengikuti divisi: pilih divisi tertentu (mis. Administrasi) → “Pendaftar Pilihan 1” divisi itu; pilih Semua Divisi → “Semua Calon Anggota” (tabel kosong dulu, orang masuk saat QR-nya dipindai). Penerima masih bisa diganti manual. Cakupan lain (Diterima, Pilihan 1, Semua Pendaftar) membuat daftar peserta dari awal dengan status Belum Hadir; calon anggota baru otomatis ikut saat halaman acara dibuka.",
       },
       {
+        title: "Catat keaktifan",
+        detail:
+          "Di kolom Keaktifan tabel peserta, tekan + setiap kali peserta bertanya atau menjawab (− untuk koreksi, maks 99). Angkanya otomatis masuk tab Penilaian: tampil “+N aktif” di kolom acara dan total di kolom Keaktifan.",
+      },
+      {
         title: "Edit acara",
         detail:
           "Salah jam/tanggal tidak perlu membuat acara baru: buka detail acara, klik Edit Acara, ubah nama, jam mulai/selesai, lokasi, atau catatan, lalu Simpan Perubahan. Divisi & penerima tidak bisa diubah (daftar peserta tetap). Status kehadiran yang sudah tercatat tidak dihitung ulang.",

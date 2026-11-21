@@ -57,6 +57,8 @@ interface GradebookData {
   meetings: Meeting[];
   /** `${meeting.key}:${applicantId}` -> status tercatat */
   attendance: Record<string, Attendance>;
+  /** `${meeting.key}:${applicantId}` -> jumlah bertanya/menjawab */
+  activity: Record<string, number>;
   items: Item[];
   /** `${itemId}:${applicantId}` */
   scores: Record<string, Score>;
@@ -90,7 +92,7 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
 
   const [attendances, scores] = await Promise.all([
     eventIds.length
-      ? supabase.from("event_attendances").select("event_id, applicant_id, status").in("event_id", eventIds)
+      ? supabase.from("event_attendances").select("event_id, applicant_id, status, activity_count").in("event_id", eventIds)
       : { data: [] },
     itemIds.length
       ? supabase.from("assessment_scores").select("item_id, applicant_id, score, note").in("item_id", itemIds)
@@ -98,8 +100,10 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
   ]);
 
   const attendance: Record<string, Attendance> = {};
+  const activity: Record<string, number> = {};
   for (const a of attendances.data || []) {
     if (a.status !== "pending") attendance[`acara-${a.event_id}:${a.applicant_id}`] = a.status as Attendance;
+    if (a.activity_count) activity[`acara-${a.event_id}:${a.applicant_id}`] = a.activity_count;
   }
 
   const scoreMap: Record<string, Score> = {};
@@ -111,7 +115,7 @@ async function loadGradebook(divisionId: string): Promise<GradebookData> {
     .map((e) => ({ key: `acara-${e.id}`, id: e.id, label: e.title, at: e.event_date }))
     .sort((a, b) => a.at.localeCompare(b.at));
 
-  return { divisionId, candidates, meetings, attendance, items: items.data || [], scores: scoreMap };
+  return { divisionId, candidates, meetings, attendance, activity, items: items.data || [], scores: scoreMap };
 }
 
 
@@ -303,6 +307,9 @@ export function GradebookPage({ divisions, defaultDivision, canAssess }: Gradebo
                     </th>
                   ))}
                   <th className="py-2.5 px-3 text-center font-semibold">Hadir</th>
+                  <th className="py-2.5 px-3 text-center font-semibold" title="Total bertanya/menjawab di semua acara">
+                    Keaktifan
+                  </th>
                   <th className="py-2.5 px-3 text-center font-semibold">Rata-rata</th>
                 </tr>
               </thead>
@@ -314,6 +321,7 @@ export function GradebookPage({ divisions, defaultDivision, canAssess }: Gradebo
                     .map((i) => data.scores[`${i.id}:${c.id}`]?.score)
                     .filter((v): v is number => typeof v === "number");
                   const avg = values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+                  const activeTotal = data.meetings.reduce((sum, m) => sum + (data.activity[`${m.key}:${c.id}`] || 0), 0);
                   return (
                     <tr key={c.id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30">
                       <td className="py-2 px-3 text-center font-mono text-zinc-400">{idx + 1}</td>
@@ -337,6 +345,14 @@ export function GradebookPage({ divisions, defaultDivision, canAssess }: Gradebo
                         return (
                           <td key={m.key} className="py-2 px-2 text-center">
                             {badge}
+                            {data.activity[`${m.key}:${c.id}`] ? (
+                              <span
+                                className="block mt-0.5 text-[10px] font-semibold text-[#B22234] dark:text-rose-400"
+                                title="Keaktifan (bertanya/menjawab)"
+                              >
+                                +{data.activity[`${m.key}:${c.id}`]} aktif
+                              </span>
+                            ) : null}
                           </td>
                         );
                       })}
@@ -375,6 +391,9 @@ export function GradebookPage({ divisions, defaultDivision, canAssess }: Gradebo
                       })}
                       <td className="py-2 px-3 text-center font-mono tabular-nums">
                         {done.length ? `${present}/${done.length}` : "–"}
+                      </td>
+                      <td className="py-2 px-3 text-center font-mono font-semibold tabular-nums">
+                        {activeTotal || "–"}
                       </td>
                       <td className="py-2 px-3 text-center font-mono font-semibold tabular-nums">
                         {avg === null ? "–" : avg.toFixed(1)}

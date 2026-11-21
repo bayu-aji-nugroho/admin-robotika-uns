@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, RefreshCw, X, FileX, MessageSquare } from "lucide-react";
+import { Search, RefreshCw, X, FileX, MessageSquare, Minus, Plus } from "lucide-react";
 import { ApplicantSearchPicker, type PickedApplicant } from "@/components/organisms/ApplicantSearchPicker";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -76,6 +76,28 @@ export function EventAttendeeTable({
     setSavingId(null);
     if (error) setStatusError(error.message);
     await onRefresh();
+  };
+
+  // Keaktifan (bertanya/menjawab): angka tampil langsung, lalu disimpan; batal bila gagal
+  const [activity, setActivity] = useState<Record<string, number>>({});
+  const changeActivity = async (row: EventAttendanceItem, delta: number) => {
+    const current = activity[row.id] ?? row.activity_count;
+    const next = Math.min(99, Math.max(0, current + delta));
+    if (next === current) return;
+    setActivity((prev) => ({ ...prev, [row.id]: next }));
+    const { error } = await createClient().from("event_attendances").update({ activity_count: next }).eq("id", row.id);
+    if (error) {
+      setStatusError(error.message);
+      setActivity((prev) => ({ ...prev, [row.id]: current }));
+      return;
+    }
+    await onRefresh();
+    // Setelah data segar, pakai angka dari server (bisa juga diubah panitia lain)
+    setActivity((prev) => {
+      const rest = { ...prev };
+      delete rest[row.id];
+      return rest;
+    });
   };
 
   // Pop-up catatan per peserta (mis. alasan izin); simpan kosong = hapus catatan
@@ -193,6 +215,9 @@ export function EventAttendeeTable({
                 <th className="py-3 px-4 w-32">NIM</th>
                 <th className="py-3 px-4">Token Tiket</th>
                 <th className="py-3 px-4 w-44">Status Kehadiran</th>
+                <th className="py-3 px-4 w-32 text-center" title="Jumlah bertanya/menjawab saat acara">
+                  Keaktifan
+                </th>
                 {canManage && (
                   <th className="py-3 px-4 text-right w-40">Ubah Status</th>
                 )}
@@ -250,6 +275,33 @@ export function EventAttendeeTable({
                           <p className="max-w-56 text-[11px] italic text-zinc-600 dark:text-zinc-300 break-words">
                             “{row.note}”
                           </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex items-center justify-center gap-1">
+                        {canManage && (
+                          <button
+                            type="button"
+                            onClick={() => changeActivity(row, -1)}
+                            aria-label={`Kurangi keaktifan ${row.applicant?.full_name || ""}`}
+                            className="p-1 rounded-md border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                        )}
+                        <span className="min-w-6 text-center font-mono text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                          {activity[row.id] ?? row.activity_count}
+                        </span>
+                        {canManage && (
+                          <button
+                            type="button"
+                            onClick={() => changeActivity(row, 1)}
+                            aria-label={`Tambah keaktifan ${row.applicant?.full_name || ""}`}
+                            className="p-1 rounded-md border border-[#B22234]/40 text-[#B22234] dark:text-rose-400 hover:bg-[#FCF2F3] dark:hover:bg-rose-950/40 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
                         )}
                       </div>
                     </td>
