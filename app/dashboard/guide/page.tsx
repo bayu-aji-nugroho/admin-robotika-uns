@@ -29,11 +29,13 @@ export default async function GuideRoute() {
     redirect(`/?error=unauthorized_email&email=${encodeURIComponent(user.email)}`);
   }
 
-  let roleName: string | null = null;
-  if (access.roleId) {
-    const { data } = await supabase.from("admin_roles").select("name").eq("id", access.roleId).maybeSingle();
-    roleName = data?.name || null;
-  }
+  const [roleResult, settingsResult] = await Promise.all([
+    access.roleId
+      ? supabase.from("admin_roles").select("name").eq("id", access.roleId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase.from("admin_settings").select("pinned_guide_sections").eq("id", 1).maybeSingle(),
+  ]);
+  const roleName: string | null = roleResult.data?.name || null;
 
   return (
     <GuidePage
@@ -43,6 +45,7 @@ export default async function GuideRoute() {
         roleName,
         permissions: access.permissions,
       }}
+      pinnedSections={settingsResult.data?.pinned_guide_sections ?? []}
     />
   );
 }

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { ADMIN_PERMISSIONS, AdminPermission } from "@/utils/permissions";
 import { GuideToc, type GuideTocItem } from "@/components/organisms/GuideToc";
+import { GuidePinButton } from "@/components/organisms/GuidePinButton";
 
 interface GuidePageProps {
   viewer: {
@@ -31,6 +32,8 @@ interface GuidePageProps {
     roleName: string | null;
     permissions: AdminPermission[];
   };
+  /** Bagian yang disematkan superadmin, tampil paling atas (urut sesuai waktu disematkan) */
+  pinnedSections?: string[];
 }
 
 interface GuideStep {
@@ -703,9 +706,14 @@ function PermissionMark({ on }: { on: boolean }) {
   );
 }
 
-export function GuidePage({ viewer }: GuidePageProps) {
+export function GuidePage({ viewer, pinnedSections = [] }: GuidePageProps) {
+  const pinnedSet = new Set(pinnedSections);
+  const orderedSections = [
+    ...pinnedSections.map((id) => SECTIONS.find((s) => s.id === id)).filter((s): s is GuideSection => Boolean(s)),
+    ...SECTIONS.filter((s) => !pinnedSet.has(s.id)),
+  ];
   const tocItems: GuideTocItem[] = [
-    ...SECTIONS.map((s) => ({ id: s.id, title: s.title })),
+    ...orderedSections.map((s) => ({ id: s.id, title: pinnedSet.has(s.id) ? `📌 ${s.title}` : s.title })),
     { id: "hak-akses", title: "Hak Akses per Role" },
     { id: "aturan-role", title: "Aturan Perubahan Role" },
   ];
@@ -774,18 +782,30 @@ export function GuidePage({ viewer }: GuidePageProps) {
         <GuideToc items={tocItems} variant="mobile" />
 
         {/* Panduan fitur */}
-        {SECTIONS.map((section, index) => {
+        {orderedSections.map((section, index) => {
           const Icon = section.icon;
           return (
-            <section key={section.id} id={section.id} className={`${cardClass} space-y-4 scroll-mt-28 xl:scroll-mt-6`}>
+            <section
+              key={section.id}
+              id={section.id}
+              className={`${cardClass} space-y-4 scroll-mt-28 xl:scroll-mt-6 ${
+                pinnedSet.has(section.id) ? "ring-1 ring-amber-300 dark:ring-amber-800" : ""
+              }`}
+            >
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Icon className="w-4 h-4 text-[#B22234] dark:text-rose-400 shrink-0" />
                   <h2 className="text-sm sm:text-base font-bold text-[#18181b] dark:text-zinc-100">
                     {index + 1}. {section.title}
                   </h2>
+                  {pinnedSet.has(section.id) && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/50 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
+                      📌 Disematkan
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {viewer.isSuperadmin && <GuidePinButton sectionId={section.id} pinned={pinnedSet.has(section.id)} />}
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[10px] font-semibold text-zinc-600 dark:text-zinc-300">
                     <KeyRound className="w-3 h-3" /> {section.requires}
                   </span>
