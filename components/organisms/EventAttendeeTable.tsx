@@ -78,21 +78,29 @@ export function EventAttendeeTable({
     await onRefresh();
   };
 
-  // Catatan per peserta (mis. alasan izin); kosongkan untuk menghapus
-  const editNote = async (row: EventAttendanceItem) => {
-    const input = window.prompt(
-      `Catatan untuk ${row.applicant?.full_name || "peserta"} (maks 300 karakter, kosongkan untuk menghapus):`,
-      row.note ?? ""
-    );
-    if (input === null) return;
-    setStatusError(null);
-    setSavingId(row.applicant_id);
+  // Pop-up catatan per peserta (mis. alasan izin); simpan kosong = hapus catatan
+  const [noteRow, setNoteRow] = useState<EventAttendanceItem | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
+
+  const openNote = (row: EventAttendanceItem) => {
+    setNoteRow(row);
+    setNoteText(row.note ?? "");
+    setNoteError(null);
+  };
+
+  const saveNote = async (value: string) => {
+    if (!noteRow || isSavingNote) return;
+    setIsSavingNote(true);
+    setNoteError(null);
     const { error } = await createClient()
       .from("event_attendances")
-      .update({ note: input.trim().slice(0, 300) || null })
-      .eq("id", row.id);
-    setSavingId(null);
-    if (error) setStatusError(error.message);
+      .update({ note: value.trim().slice(0, 300) || null })
+      .eq("id", noteRow.id);
+    setIsSavingNote(false);
+    if (error) return setNoteError(error.message);
+    setNoteRow(null);
     await onRefresh();
   };
 
@@ -263,7 +271,7 @@ export function EventAttendeeTable({
                         </select>
                         <button
                           type="button"
-                          onClick={() => editNote(row)}
+                          onClick={() => openNote(row)}
                           disabled={savingId === row.applicant_id}
                           title={row.note ? `Catatan: ${row.note}` : "Tambah catatan"}
                           aria-label={`Catatan ${row.applicant?.full_name || ""}`}
@@ -297,6 +305,97 @@ export function EventAttendeeTable({
               </>
             )}
           </p>
+        </div>
+      )}
+      {noteRow && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="note-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+          onClick={() => !isSavingNote && setNoteRow(null)}
+        >
+          <div
+            className="w-full max-w-md bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-[#E4E4E7] dark:border-zinc-800 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 id="note-modal-title" className="flex items-center gap-2 text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  <MessageSquare className="w-4 h-4 text-[#B22234] dark:text-rose-400" />
+                  Catatan Peserta
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+                  {noteRow.applicant?.full_name || "-"} · {noteRow.applicant?.nim || "-"} ·{" "}
+                  {ATTENDANCE_LABELS[noteRow.status]}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNoteRow(null)}
+                disabled={isSavingNote}
+                aria-label="Tutup"
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-2">
+              <textarea
+                autoFocus
+                rows={4}
+                maxLength={300}
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Contoh: Izin sakit, ada surat dokter"
+                className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-sm text-zinc-900 dark:text-zinc-100 focus:border-[#B22234] focus:ring-1 focus:ring-[#B22234] focus:outline-hidden resize-none"
+              />
+              <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                <span>Tidak ditampilkan di website calon anggota.</span>
+                <span className="font-mono">{noteText.length}/300</span>
+              </div>
+              {noteError && (
+                <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
+                  {noteError}
+                </p>
+              )}
+            </div>
+
+            <div className="px-5 py-3.5 border-t border-[#E4E4E7] dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-950/40 flex items-center justify-between gap-2">
+              {noteRow.note ? (
+                <button
+                  type="button"
+                  onClick={() => saveNote("")}
+                  disabled={isSavingNote}
+                  className="text-xs font-semibold text-rose-600 hover:underline cursor-pointer disabled:opacity-50"
+                >
+                  Hapus catatan
+                </button>
+              ) : (
+                <span />
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNoteRow(null)}
+                  disabled={isSavingNote}
+                  className="px-3 py-2 rounded-lg text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer disabled:opacity-50"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveNote(noteText)}
+                  disabled={isSavingNote}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-[#B22234] hover:bg-[#8B0000] text-white cursor-pointer disabled:opacity-60"
+                >
+                  {isSavingNote && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
+                  Simpan
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
