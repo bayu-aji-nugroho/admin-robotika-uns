@@ -60,6 +60,12 @@ export const ADMIN_PERMISSIONS = [
       "Menambahkan acara divisi, menyiapkan data tiket QR calon anggota, dan memindai QR Code kehadiran.",
   },
   {
+    key: "roles.assign_limited",
+    label: "Tambah admin (role terbatas)",
+    description:
+      "Menambah & mencabut admin di menu Role, tetapi hanya dengan role yang ditandai superadmin “boleh diberikan” (mis. Teacher Magang). Tidak bisa membuat/mengubah role atau menyentuh superadmin.",
+  },
+  {
     key: "grades.manage",
     label: "Nilai magang",
     description:

@@ -10,6 +10,8 @@ export interface AdminRoleItem {
   name: string;
   description: string | null;
   permissions: AdminPermission[];
+  /** Boleh diberikan oleh admin pemegang hak roles.assign_limited */
+  is_assignable: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -375,5 +377,68 @@ export async function revokeRoleMemberAction(
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Gagal mencabut akses.";
     return { success: false, error: msg };
+  }
+}
+
+/** Superadmin: tandai role boleh/tidak diberikan dari menu Role terbatas */
+export async function setRoleAssignableAction(
+  roleId: string,
+  isAssignable: boolean
+): Promise<ActionResult<AdminRoleItem>> {
+  try {
+    const { authorized, error: authError, supabase } = await verifySuperadmin();
+    if (!authorized) {
+      return { success: false, error: authError };
+    }
+    const { data, error } = await supabase
+      .from("admin_roles")
+      .update({ is_assignable: isAssignable })
+      .eq("id", roleId)
+      .select()
+      .single();
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    revalidateRolePages();
+    return { success: true, data: data as AdminRoleItem };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Gagal memperbarui role." };
+  }
+}
+
+// Admin dengan hak roles.assign_limited: aturan ditegakkan RPC di database (role harus is_assignable)
+export async function assignLimitedRoleAction(input: {
+  roleId: string;
+  email: string;
+  fullName?: string;
+}): Promise<ActionResult<RoleMemberItem>> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("assign_limited_role", {
+      p_email: (input.email || "").trim(),
+      p_role_id: input.roleId,
+      p_full_name: (input.fullName || "").trim() || null,
+    });
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    revalidateRolePages();
+    return { success: true, data: data as RoleMemberItem };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Gagal menambahkan admin." };
+  }
+}
+
+export async function revokeLimitedRoleAction(memberId: string): Promise<ActionResult<{ id: string }>> {
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("revoke_limited_role", { p_member_id: memberId });
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    revalidateRolePages();
+    return { success: true, data: { id: memberId } };
+  } catch (err: unknown) {
+    return { success: false, error: err instanceof Error ? err.message : "Gagal mencabut akses." };
   }
 }

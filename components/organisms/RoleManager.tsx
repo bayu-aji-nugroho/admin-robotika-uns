@@ -19,6 +19,7 @@ import {
   RoleMemberItem,
   createRoleAction,
   updateRoleAction,
+  setRoleAssignableAction,
   deleteRoleAction,
   assignRoleMemberAction,
   revokeRoleMemberAction,
@@ -374,6 +375,16 @@ export function RoleManager({
     setDeletingRoleId(null);
   };
 
+  const handleToggleAssignable = async (role: AdminRoleItem) => {
+    const updated = await run(
+      () => setRoleAssignableAction(role.id, !role.is_assignable),
+      role.is_assignable
+        ? `Role ${role.name} tidak lagi bisa diberikan admin lain.`
+        : `Role ${role.name} sekarang bisa diberikan admin dengan hak “Tambah admin (role terbatas)”.`
+    );
+    if (updated) setRoles((prev) => prev.map((r) => (r.id === role.id ? { ...r, is_assignable: updated.is_assignable } : r)));
+  };
+
   const upsertMember = (member: RoleMemberItem) => {
     setMembers((prev) =>
       prev.some((m) => m.id === member.id)
@@ -612,6 +623,16 @@ export function RoleManager({
                         ))
                       )}
                     </div>
+                    <label className="inline-flex items-center gap-2 text-[11px] text-zinc-600 dark:text-zinc-300 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        className="accent-[#B22234]"
+                        checked={role.is_assignable}
+                        disabled={busy}
+                        onChange={() => handleToggleAssignable(role)}
+                      />
+                      Boleh diberikan admin lain (hak “Tambah admin (role terbatas)”)
+                    </label>
                   </div>
 
                   <div className="flex items-center gap-1 shrink-0">

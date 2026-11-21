@@ -594,7 +594,7 @@ const SECTIONS: GuideSection[] = [
     title: "Role & Akses",
     icon: ShieldCheck,
     href: "/dashboard/role",
-    requires: "Khusus superadmin",
+    requires: "Khusus superadmin · versi terbatas: Tambah admin (role terbatas)",
     intro: "Mendaftarkan admin, membuat role, dan menentukan hak akses tiap role.",
     steps: [
       { title: "Tambah Role", detail: "Beri nama (mis. Pewawancara), deskripsi, lalu centang hak akses yang diperlukan." },
@@ -605,6 +605,11 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Ubah atau cabut",
         detail: "Ganti role seorang admin (memasukkan email yang sudah terdaftar akan memindahkan role-nya), ubah hak akses role, atau cabut akses admin.",
+      },
+      {
+        title: "Delegasikan penambahan admin (role terbatas)",
+        detail:
+          "Superadmin centang “Boleh diberikan admin lain” di kartu role (mis. Teacher Magang), lalu beri hak “Tambah admin (role terbatas)” ke role koordinator. Admin pemegang hak itu melihat menu Role versi terbatas: hanya bisa menambah/mencabut admin dengan role yang dicentang, tidak bisa membuat/mengubah role, mengubah admin dengan role lain, atau menyentuh superadmin.",
       },
       {
         title: "Hapus role",

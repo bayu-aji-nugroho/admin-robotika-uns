@@ -16,6 +16,7 @@ interface UserProfile {
   divisionRole: string;
   avatarUrl?: string;
   isSuperadmin?: boolean;
+  canAssignLimited?: boolean;
   /** Role Viewer: hanya lihat */
   isViewer?: boolean;
 }
@@ -122,6 +123,12 @@ export function DashboardSidebar({
             avatarUrl:
               user.user_metadata?.avatar_url || user.user_metadata?.picture,
             isSuperadmin: Boolean(whitelistData?.is_superadmin),
+            // Menu Role versi terbatas (hanya role yang boleh diberikan)
+            canAssignLimited: Boolean(
+              (whitelistData?.admin_roles as unknown as { permissions?: string[] } | null)?.permissions?.includes(
+                "roles.assign_limited"
+              )
+            ),
             isViewer:
               !whitelistData?.is_superadmin &&
               Boolean(
@@ -266,7 +273,7 @@ export function DashboardSidebar({
         </NavSection>
 
         {/* Section # akses (Hanya superadmin: ketua umum, wakil ketua, developer) */}
-        {profile.isSuperadmin && (
+        {(profile.isSuperadmin || profile.canAssignLimited) && (
           <NavSection title="akses" isCollapsed={isCollapsed}>
             <NavItem
               label="Role"

@@ -3,21 +3,26 @@
 import React from "react";
 import { ShieldAlert } from "lucide-react";
 import { RoleManager } from "@/components/organisms/RoleManager";
+import { LimitedRoleManager } from "@/components/organisms/LimitedRoleManager";
 import type { AdminRoleItem, RoleMemberItem } from "@/app/actions/roles";
 
 interface RolesPageProps {
   canManage: boolean;
+  /** Admin dengan hak roles.assign_limited (bukan superadmin) */
+  limited?: boolean;
   roles: AdminRoleItem[];
   members: RoleMemberItem[];
   currentEmail?: string;
 }
 
-export function RolesPage({ canManage, roles, members, currentEmail }: RolesPageProps) {
+export function RolesPage({ canManage, limited, roles, members, currentEmail }: RolesPageProps) {
   return (
     <div className="flex-1 bg-[#F9F9F8] dark:bg-[#09090b] min-h-screen py-6 px-4 sm:px-8 transition-colors">
       <div className="max-w-4xl mx-auto space-y-6">
         {canManage ? (
           <RoleManager initialRoles={roles} initialMembers={members} currentEmail={currentEmail} />
+        ) : limited ? (
+          <LimitedRoleManager roles={roles} initialMembers={members} currentEmail={currentEmail} />
         ) : (
           <div className="bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 rounded-xl p-6 shadow-xs flex items-start gap-3">
             <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
