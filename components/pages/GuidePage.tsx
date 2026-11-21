@@ -51,7 +51,7 @@ interface GuideSection {
   /** Penjelasan status/label yang tampil di halaman, dikelompokkan per bagian */
   statuses?: { group: string; items: { label: string; tone: StatusTone; meaning: string }[] }[];
   /** Gambar tutorial beranotasi (di folder public/guide) */
-  image?: { src: string; alt: string; width: number; height: number; caption: string };
+  images?: { src: string; alt: string; width: number; height: number; caption: string }[];
 }
 
 type StatusTone =
@@ -307,13 +307,15 @@ const SECTIONS: GuideSection[] = [
         ],
       },
     ],
-    image: {
-      src: "/guide/tutorial-jadwal-wawancara.png",
-      alt: "Tutorial bergambar halaman Jadwal Wawancara dengan 13 langkah bernomor",
-      width: 2124,
-      height: 1774,
-      caption: "Ikuti nomor pada gambar. Klik gambar untuk membuka ukuran penuh.",
-    },
+    images: [
+      {
+        src: "/guide/tutorial-jadwal-wawancara.png",
+        alt: "Tutorial bergambar halaman Jadwal Wawancara dengan 13 langkah bernomor",
+        width: 2124,
+        height: 1774,
+        caption: "Ikuti nomor pada gambar. Klik gambar untuk membuka ukuran penuh.",
+      },
+    ],
     tips: [
       "Daftar sesi otomatis hanya menampilkan sesi Anda. Hapus centang “Hanya yang saya wawancarai” untuk melihat semua.",
       "Slot yang sudah dipesan calon anggota terkunci dan tidak ikut terhapus saat Anda mengubah kalender.",
@@ -417,13 +419,15 @@ const SECTIONS: GuideSection[] = [
         ],
       },
     ],
-    image: {
-      src: "/guide/contoh-sesi-calon-anggota.png",
-      alt: "Contoh satu baris sesi di Jadwal Calon Anggota dengan 10 bagian bernomor dan alur status Menunggu konfirmasi, Dikonfirmasi, Selesai",
-      width: 2440,
-      height: 1460,
-      caption: "Contoh satu baris sesi (nama & NIM adalah data contoh). Klik gambar untuk membuka ukuran penuh.",
-    },
+    images: [
+      {
+        src: "/guide/contoh-sesi-calon-anggota.png",
+        alt: "Contoh satu baris sesi di Jadwal Calon Anggota dengan 10 bagian bernomor dan alur status Menunggu konfirmasi, Dikonfirmasi, Selesai",
+        width: 2440,
+        height: 1460,
+        caption: "Contoh satu baris sesi (nama & NIM adalah data contoh). Klik gambar untuk membuka ukuran penuh.",
+      },
+    ],
     tips: [
       "Daftar diperbarui otomatis saat Anda kembali dari tab lembar wawancara.",
       "Bila calon mengganti jadwal sebelum Accept, lokasi yang sudah dicatat ikut dikosongkan karena jamnya berubah.",
@@ -489,6 +493,32 @@ const SECTIONS: GuideSection[] = [
           { label: "Bukan Peserta Acara Ini", tone: "neutral", meaning: "Calon di luar divisi/cakupan acara (acara bercakupan)." },
           { label: "Presensi Tidak Aktif", tone: "neutral", meaning: "Acara sedang dinonaktifkan." },
         ],
+      },
+    ],
+    images: [
+      {
+        src: "/guide/tutorial-buat-acara-daftar.png",
+        alt: "Halaman Buat Acara & Presensi QR: tombol Tambah Acara, filter divisi, dan kartu acara dengan jumlah hadir",
+        width: 2146,
+        height: 902,
+        caption:
+          "1. Daftar acara — ikuti nomor pada gambar. Klik gambar untuk ukuran penuh.",
+      },
+      {
+        src: "/guide/tutorial-buat-acara-form.png",
+        alt: "Pop-up Tambah Acara: nama acara, divisi, penerima tiket QR, gabung dengan divisi lain, waktu, lokasi, dan catatan",
+        width: 1356,
+        height: 1037,
+        caption:
+          "2. Pop-up Tambah Acara — isi dari atas ke bawah sesuai nomor, lalu Simpan & Buat Tiket.",
+      },
+      {
+        src: "/guide/tutorial-buat-acara-detail.png",
+        alt: "Halaman detail acara: tombol Tampilkan QR Acara dan Edit Acara, scanner kamera, pencarian, tambah peserta izin, dan tabel peserta dengan status, keaktifan, dan ubah status",
+        width: 2077,
+        height: 1247,
+        caption:
+          "3. Detail acara (scan & data tiket) — ikuti nomor pada gambar. Data calon pada gambar disamarkan.",
       },
     ],
     tips: [
@@ -813,26 +843,26 @@ export function GuidePage({ viewer }: GuidePageProps) {
                 </div>
               )}
 
-              {section.image && (
-                <figure className="space-y-1.5">
+              {section.images?.map((image) => (
+                <figure key={image.src} className="space-y-1.5">
                   <a
-                    href={section.image.src}
+                    href={image.src}
                     target="_blank"
                     rel="noopener"
                     className="block rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white hover:border-[#B22234]/60 transition-colors"
                   >
                     <Image
-                      src={section.image.src}
-                      alt={section.image.alt}
-                      width={section.image.width}
-                      height={section.image.height}
+                      src={image.src}
+                      alt={image.alt}
+                      width={image.width}
+                      height={image.height}
                       sizes="(min-width: 1024px) 832px, 100vw"
                       className="w-full h-auto"
                     />
                   </a>
-                  <figcaption className="text-[11px] text-zinc-400">{section.image.caption}</figcaption>
+                  <figcaption className="text-[11px] text-zinc-400">{image.caption}</figcaption>
                 </figure>
-              )}
+              ))}
 
               {section.tips && (
                 <ul className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-200 dark:border-zinc-800 space-y-1 text-[11px] text-zinc-600 dark:text-zinc-400 list-disc pl-7">
