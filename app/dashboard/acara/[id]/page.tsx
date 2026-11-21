@@ -32,25 +32,14 @@ export default async function EventDetailRoute({ params }: PageProps) {
   if (!eventId) notFound();
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Sesi sudah divalidasi middleware; klaim JWT cukup diverifikasi lokal (lebih cepat dari getUser)
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const email = claimsData?.claims?.email;
 
-  if (!user || !user.email) {
+  if (!email) {
     redirect("/");
   }
 
-  const access = await getAdminAccess(supabase, user.email);
-  if (!access) {
-    await supabase.auth.signOut();
-    redirect(`/?error=unauthorized_email&email=${encodeURIComponent(user.email)}`);
-  }
-
-  if (!hasPermission(access, "applicants.view")) {
-    redirect("/dashboard");
-  }
-
-  const canManage = hasPermission(access, "events.manage");
   const fetchAttendees = () =>
     supabase
       .from("event_attendances")
@@ -60,7 +49,9 @@ export default async function EventDetailRoute({ params }: PageProps) {
 
   // Sinkron otomatis berjalan bersamaan dengan pemuatan data agar halaman tidak menunggu;
   // bila ada peserta baru, daftar peserta dimuat ulang sekali
-  const [eventResult, firstAttendees, syncResult, divisionsResult] = await Promise.all([
+  // Sinkron dipanggil tanpa menunggu cek akses: RPC menolak sendiri bila tidak punya hak kelola acara
+  const [access, eventResult, firstAttendees, syncResult, divisionsResult] = await Promise.all([
+    getAdminAccess(supabase, email),
     supabase
       .from("division_events")
       .select(
@@ -69,10 +60,21 @@ export default async function EventDetailRoute({ params }: PageProps) {
       .eq("id", eventId)
       .maybeSingle(),
     fetchAttendees(),
-    canManage ? supabase.rpc("sync_event_attendees", { p_event_id: eventId }) : null,
+    supabase.rpc("sync_event_attendees", { p_event_id: eventId }),
     supabase.from("divisions").select("id, name"),
   ]);
-  const attendeesResult = Number(syncResult?.data) > 0 ? await fetchAttendees() : firstAttendees;
+
+  if (!access) {
+    await supabase.auth.signOut();
+    redirect(`/?error=unauthorized_email&email=${encodeURIComponent(email)}`);
+  }
+
+  if (!hasPermission(access, "applicants.view")) {
+    redirect("/dashboard");
+  }
+
+  const canManage = hasPermission(access, "events.manage");
+  const attendeesResult = Number(syncResult.data) > 0 ? await fetchAttendees() : firstAttendees;
 
   const ev = eventResult.data;
   if (!ev) {

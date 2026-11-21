@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Search, RefreshCw, X, FileX } from "lucide-react";
+import { Search, RefreshCw, X, FileX, MessageSquare } from "lucide-react";
 import { ApplicantSearchPicker, type PickedApplicant } from "@/components/organisms/ApplicantSearchPicker";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -73,6 +73,24 @@ export function EventAttendeeTable({
       p_applicant_id: applicantId,
       p_status: status,
     });
+    setSavingId(null);
+    if (error) setStatusError(error.message);
+    await onRefresh();
+  };
+
+  // Catatan per peserta (mis. alasan izin); kosongkan untuk menghapus
+  const editNote = async (row: EventAttendanceItem) => {
+    const input = window.prompt(
+      `Catatan untuk ${row.applicant?.full_name || "peserta"} (maks 300 karakter, kosongkan untuk menghapus):`,
+      row.note ?? ""
+    );
+    if (input === null) return;
+    setStatusError(null);
+    setSavingId(row.applicant_id);
+    const { error } = await createClient()
+      .from("event_attendances")
+      .update({ note: input.trim().slice(0, 300) || null })
+      .eq("id", row.id);
     setSavingId(null);
     if (error) setStatusError(error.message);
     await onRefresh();
@@ -220,10 +238,16 @@ export function EventAttendeeTable({
                             {formatJakartaDateTime(row.checked_in_at)}
                           </p>
                         )}
+                        {row.note && (
+                          <p className="max-w-56 text-[11px] italic text-zinc-600 dark:text-zinc-300 break-words">
+                            “{row.note}”
+                          </p>
+                        )}
                       </div>
                     </td>
                     {canManage && (
                       <td className="py-3 px-4 text-right">
+                        <div className="inline-flex items-center gap-1.5">
                         <select
                           value={row.status}
                           disabled={savingId === row.applicant_id}
@@ -237,6 +261,19 @@ export function EventAttendeeTable({
                             </option>
                           ))}
                         </select>
+                        <button
+                          type="button"
+                          onClick={() => editNote(row)}
+                          disabled={savingId === row.applicant_id}
+                          title={row.note ? `Catatan: ${row.note}` : "Tambah catatan"}
+                          aria-label={`Catatan ${row.applicant?.full_name || ""}`}
+                          className={`p-1.5 rounded-md cursor-pointer disabled:opacity-50 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+                            row.note ? "text-[#B22234] dark:text-rose-400" : "text-zinc-400"
+                          }`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                        </div>
                       </td>
                     )}
                   </tr>

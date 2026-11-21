@@ -36,9 +36,9 @@ export async function updateSession(request: NextRequest) {
       },
     });
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    // getClaims memverifikasi JWT secara lokal (fallback ke server Auth bila kunci simetris)
+    const { data: claimsData } = await supabase.auth.getClaims();
+    const user = claimsData?.claims ?? null;
 
     const pathname = request.nextUrl.pathname;
     const isDashboardRoute =

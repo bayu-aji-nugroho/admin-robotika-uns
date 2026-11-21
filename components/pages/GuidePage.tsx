@@ -466,7 +466,7 @@ const SECTIONS: GuideSection[] = [
       {
         title: "Catat peserta izin",
         detail:
-          "Di kolom “Tambah peserta izin”, ketik nama atau NIM lalu pilih orangnya; statusnya menjadi Izin.",
+          "Di kolom “Tambah peserta izin”, ketik nama atau NIM lalu pilih orangnya; statusnya menjadi Izin. Klik ikon 💬 di sebelah Ubah Status untuk menulis catatan (mis. alasan izin, maks 300 karakter); ikon merah = sudah ada catatan, dan catatan tampil di bawah status. Catatan tidak ditampilkan di website calon anggota.",
       },
       {
         title: "Ubah status kehadiran",

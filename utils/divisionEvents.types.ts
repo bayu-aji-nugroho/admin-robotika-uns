@@ -58,6 +58,8 @@ export interface EventAttendanceItem {
   checked_in_at: string | null;
   checked_in_by: string | null;
   created_at: string;
+  /** Catatan admin, mis. alasan izin */
+  note: string | null;
   applicant: {
     id: string;
     full_name: string | null;
@@ -71,7 +73,7 @@ export interface EventAttendanceItem {
 
 /** Kolom tabel kehadiran + data calon anggota (dipakai server & client agar sama) */
 export const ATTENDANCE_SELECT =
-  "id, event_id, applicant_id, qr_token, status, checked_in_at, checked_in_by, created_at, applicants(id, full_name, nim, prodi, fakultas, applicant_divisions(priority, divisions(name)))";
+  "id, event_id, applicant_id, qr_token, status, checked_in_at, checked_in_by, created_at, note, applicants(id, full_name, nim, prodi, fakultas, applicant_divisions(priority, divisions(name)))";
 
 type AttendanceRow = {
   id: string;
@@ -82,6 +84,7 @@ type AttendanceRow = {
   checked_in_at: string | null;
   checked_in_by: string | null;
   created_at: string;
+  note?: string | null;
   applicants: unknown;
 };
 
@@ -106,6 +109,7 @@ export function mapAttendanceRow(row: AttendanceRow): EventAttendanceItem {
     checked_in_at: row.checked_in_at,
     checked_in_by: row.checked_in_by,
     created_at: row.created_at,
+    note: row.note ?? null,
     applicant: app
       ? { id: app.id, full_name: app.full_name, nim: app.nim, prodi: app.prodi, fakultas: app.fakultas, divisions: divisions || null }
       : null,

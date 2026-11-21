@@ -21,25 +21,16 @@ export const metadata: Metadata = {
 export default async function AcaraRoute() {
   await connection();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Sesi sudah divalidasi middleware; klaim JWT cukup diverifikasi lokal (lebih cepat dari getUser)
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const email = claimsData?.claims?.email;
 
-  if (!user || !user.email) {
+  if (!email) {
     redirect("/");
   }
 
-  const access = await getAdminAccess(supabase, user.email);
-  if (!access) {
-    await supabase.auth.signOut();
-    redirect(`/?error=unauthorized_email&email=${encodeURIComponent(user.email)}`);
-  }
-
-  if (!hasPermission(access, "applicants.view")) {
-    redirect("/dashboard");
-  }
-
-  const [divisionsResult, eventsResult, attendancesResult] = await Promise.all([
+  const [access, divisionsResult, eventsResult, attendancesResult] = await Promise.all([
+    getAdminAccess(supabase, email),
     supabase
       .from("divisions")
       .select("id, name, category")
@@ -54,6 +45,15 @@ export default async function AcaraRoute() {
       .order("event_date", { ascending: false }),
     supabase.from("event_attendances").select("event_id, status"),
   ]);
+
+  if (!access) {
+    await supabase.auth.signOut();
+    redirect(`/?error=unauthorized_email&email=${encodeURIComponent(email)}`);
+  }
+
+  if (!hasPermission(access, "applicants.view")) {
+    redirect("/dashboard");
+  }
 
   const divisions = (divisionsResult.data as DivisionOptionItem[]) || [];
   const divisionName = new Map(divisions.map((d) => [d.id, d.name]));
